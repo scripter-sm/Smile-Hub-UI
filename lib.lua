@@ -1,3 +1,14 @@
+--[[
+
+  _________       .__.__             ___ ___      ___.     
+ /   _____/ _____ |__|  |   ____    /   |   \ __ _\_ |__   
+ \_____  \ /     \|  |  | _/ __ \  /    ~    \  |  \ __ \  
+ /        \  Y Y  \  |  |_\  ___/  \    Y    /  |  / \_\ \ 
+/_______  /__|_|  /__|____/\___  >  \___|_  /|____/|___  / 
+        \/      \/             \/         \/           \/  
+
+--]]
+
 local SmileUILib = {}
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
