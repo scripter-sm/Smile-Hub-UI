@@ -23,7 +23,10 @@ local DEFAULT_THEME = {
     CornerRadius = UDim.new(0, 8),
     StrokeThickness = 1,
     StrokeTransparency = 0.6,
-    Font = Enum.Font.Gotham
+    Font = Enum.Font.Gotham,
+    BackgroundTransparency = 0.3,
+    HeaderTransparency = 0,
+    ElementTransparency = 0.1
 }
 local notifContainer
 local function initNotifications()
@@ -104,8 +107,8 @@ function SmileUILib:Notify(title, message, duration)
     local notifHeight = 36 + textHeight + 10
     notif.Size = UDim2.new(0, 400, 0, notifHeight)
     local ti = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-    TweenService:Create(notif, ti, {BackgroundTransparency = 0}):Play()
-    TweenService:Create(header, ti, {BackgroundTransparency = 0}):Play()
+    TweenService:Create(notif, ti, {BackgroundTransparency = DEFAULT_THEME.BackgroundTransparency}):Play()
+    TweenService:Create(header, ti, {BackgroundTransparency = DEFAULT_THEME.HeaderTransparency}):Play()
     TweenService:Create(titleLbl, ti, {TextTransparency = 0}):Play()
     TweenService:Create(content, ti, {TextTransparency = 0}):Play()
     TweenService:Create(stroke, ti, {Transparency = DEFAULT_THEME.StrokeTransparency}):Play()
@@ -132,6 +135,7 @@ function SmileUILib:CreateWindow(title, width, height)
     main.Size = UDim2.new(0, width, 0, height)
     main.Position = UDim2.new(0.5, -width/2, 0.5, -height/2)
     main.BackgroundColor3 = DEFAULT_THEME.Background
+    main.BackgroundTransparency = DEFAULT_THEME.BackgroundTransparency
     main.Active = true
     main.Draggable = true
     main.Parent = screen
@@ -146,6 +150,7 @@ function SmileUILib:CreateWindow(title, width, height)
     local header = Instance.new("Frame")
     header.Size = UDim2.new(1, 0, 0, 44)
     header.BackgroundColor3 = DEFAULT_THEME.Header
+    header.BackgroundTransparency = DEFAULT_THEME.HeaderTransparency
     header.BorderSizePixel = 0
     header.Parent = main
     local hcorner = Instance.new("UICorner")
@@ -186,6 +191,7 @@ function SmileUILib:CreateWindow(title, width, height)
     local icon = Instance.new("Frame")
     icon.Size = UDim2.new(0, 56, 0, 56)
     icon.BackgroundColor3 = DEFAULT_THEME.Header
+    icon.BackgroundTransparency = DEFAULT_THEME.HeaderTransparency
     icon.Visible = false
     icon.Draggable = true
     icon.Parent = screen
@@ -229,6 +235,7 @@ function SmileUILib:CreateWindow(title, width, height)
         local tabBtn = Instance.new("TextButton")
         tabBtn.Size = UDim2.new(1, -12, 0, 38)
         tabBtn.BackgroundColor3 = DEFAULT_THEME.AccentVeryDark
+        tabBtn.BackgroundTransparency = DEFAULT_THEME.ElementTransparency
         tabBtn.Text = tabName
         tabBtn.TextColor3 = DEFAULT_THEME.TextDim
         tabBtn.Font = DEFAULT_THEME.Font
@@ -330,6 +337,7 @@ function SmileUILib:CreateWindow(title, width, height)
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -8, 0, 36)
             frame.BackgroundColor3 = DEFAULT_THEME.AccentVeryDark
+            frame.BackgroundTransparency = DEFAULT_THEME.ElementTransparency
             frame.Parent = page
             local c = Instance.new("UICorner")
             c.CornerRadius = UDim.new(0, 5)
@@ -374,6 +382,7 @@ function SmileUILib:CreateWindow(title, width, height)
             local btn = Instance.new("TextButton")
             btn.Size = UDim2.new(1, -8, 0, 40)
             btn.BackgroundColor3 = DEFAULT_THEME.AccentDarker
+            btn.BackgroundTransparency = DEFAULT_THEME.ElementTransparency
             btn.Text = text
             btn.TextColor3 = DEFAULT_THEME.Text
             btn.Font = DEFAULT_THEME.Font
@@ -402,6 +411,7 @@ function SmileUILib:CreateWindow(title, width, height)
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -8, 0, 58)
             frame.BackgroundColor3 = DEFAULT_THEME.AccentVeryDark
+            frame.BackgroundTransparency = DEFAULT_THEME.ElementTransparency
             frame.Parent = page
             local c = Instance.new("UICorner")
             c.CornerRadius = UDim.new(0, 5)
@@ -478,6 +488,7 @@ function SmileUILib:CreateWindow(title, width, height)
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -8, 0, 40)
             frame.BackgroundColor3 = DEFAULT_THEME.AccentVeryDark
+            frame.BackgroundTransparency = DEFAULT_THEME.ElementTransparency
             frame.Parent = page
             local c = Instance.new("UICorner")
             c.CornerRadius = UDim.new(0, 5)
@@ -508,6 +519,7 @@ function SmileUILib:CreateWindow(title, width, height)
             sc.Parent = selected
             local dropFrame = Instance.new("Frame")
             dropFrame.BackgroundColor3 = DEFAULT_THEME.Background
+            dropFrame.BackgroundTransparency = DEFAULT_THEME.BackgroundTransparency
             dropFrame.Visible = false
             dropFrame.ZIndex = 2
             dropFrame.Parent = screen
@@ -564,6 +576,7 @@ function SmileUILib:CreateWindow(title, width, height)
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -8, 0, 38)
             frame.BackgroundColor3 = DEFAULT_THEME.AccentVeryDark
+            frame.BackgroundTransparency = DEFAULT_THEME.ElementTransparency
             frame.Parent = page
             local c = Instance.new("UICorner")
             c.CornerRadius = UDim.new(0, 5)
@@ -613,7 +626,7 @@ function SmileUILib:CreateWindow(title, width, height)
     main.BackgroundTransparency = 1
     TweenService:Create(main, TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
         Size = UDim2.new(0, width, 0, height),
-        BackgroundTransparency = 0
+        BackgroundTransparency = DEFAULT_THEME.BackgroundTransparency
     }):Play()
     return window
 end
