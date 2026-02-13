@@ -12,7 +12,7 @@ provides: - Animated windows - Tab-based layout - Modern green terminal
 aesthetic - Built‑in notifications - Easy API for toggles, sliders,
 dropdowns, buttons, keybinds
 
-This library is **FREE**, **OPEN SOURCE**, and made for learning & real
+This library is **FREE**, **OPEN SOURCE**, and made for $mile Hub
 usage.
 
 ------------------------------------------------------------------------
