@@ -42,7 +42,6 @@ SmileUILib.Theme = {
     SliderHeight = 58,
     DropdownHeight = 40,
     KeybindHeight = 38,
-    ColorPickerHeight = 180,
     TextboxHeight = 40,
     SpacerDefaultHeight = 8,
     AnimationSpeed = 0.18,
@@ -164,7 +163,6 @@ function SmileUILib:CreateWindow(options)
     main.Position = UDim2.new(0.5, -width / 2, 0.5, -height / 2)
     main.BackgroundColor3 = theme.Background
     main.Active = true
-    main.Draggable = true
     main.Parent = screen
     local corner = Instance.new("UICorner")
     corner.CornerRadius = theme.CornerRadius
@@ -206,6 +204,7 @@ function SmileUILib:CreateWindow(options)
     icon.Size = theme.WindowIconSize
     icon.BackgroundColor3 = theme.Header
     icon.Visible = false
+    icon.Active = true
     icon.Draggable = true
     icon.Parent = screen
     local iconCorner = Instance.new("UICorner")
@@ -242,6 +241,32 @@ function SmileUILib:CreateWindow(options)
     content.Position = UDim2.new(0, contentOffset - 12, 0, theme.WindowHeaderHeight)
     content.BackgroundTransparency = 1
     content.Parent = main
+    -- Custom dragging on header
+    local dragging = false
+    local dragStartPos
+    local startGuiPos
+    header.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStartPos = input.Position
+            startGuiPos = main.Position
+            local dragConn
+            local endConn
+            dragConn = UserInputService.InputChanged:Connect(function(input2)
+                if dragging and (input2.UserInputType == Enum.UserInputType.MouseMovement or input2.UserInputType == Enum.UserInputType.Touch) then
+                    local delta = input2.Position - dragStartPos
+                    main.Position = UDim2.new(startGuiPos.X.Scale, startGuiPos.X.Offset + delta.X, startGuiPos.Y.Scale, startGuiPos.Y.Offset + delta.Y)
+                end
+            end)
+            endConn = input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                    dragConn:Disconnect()
+                    endConn:Disconnect()
+                end
+            end)
+        end
+    end)
     local window = {}
     local activePage = nil
     function window:AddTab(tabOptions)
@@ -480,25 +505,35 @@ function SmileUILib:CreateWindow(options)
             fc.CornerRadius = UDim.new(1, 0)
             fc.Parent = fill
             local dragging = false
+            local dragInputConn
+            local dragEndConn
             track.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     dragging = true
+                    dragInputConn = UserInputService.InputChanged:Connect(function(input2)
+                        if not dragging then return end
+                        if input2.UserInputType == Enum.UserInputType.MouseMovement or input2.UserInputType == Enum.UserInputType.Touch then
+                            local rel = math.clamp((input2.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+                            fill.Size = UDim2.new(rel, 0, 1, 0)
+                            local rawValue = min + (max - min) * rel
+                            local value = math.floor((rawValue / step) + 0.5) * step
+                            value = math.clamp(value, min, max)
+                            lbl.Text = name .. ": " .. value
+                            if callback then callback(value) end
+                        end
+                    end)
+                    dragEndConn = UserInputService.InputEnded:Connect(function(input2)
+                        if input2.UserInputType == Enum.UserInputType.MouseButton1 or input2.UserInputType == Enum.UserInputType.Touch then
+                            dragging = false
+                            if dragInputConn then dragInputConn:Disconnect() end
+                            if dragEndConn then dragEndConn:Disconnect() end
+                        end
+                    end)
                 end
             end)
-            UserInputService.InputEnded:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    dragging = false
-                end
-            end)
-            UserInputService.InputChanged:Connect(function(input)
-                if not dragging or input.UserInputType ~= Enum.UserInputType.MouseMovement then return end
-                local rel = math.clamp((UserInputService:GetMouseLocation().X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
-                fill.Size = UDim2.new(rel, 0, 1, 0)
-                local rawValue = min + (max - min) * rel
-                local value = math.floor((rawValue / step) + 0.5) * step
-                value = math.clamp(value, min, max)
-                lbl.Text = name .. ": " .. value
-                if callback then callback(value) end
+            frame.Destroying:Connect(function()
+                if dragInputConn then dragInputConn:Disconnect() end
+                if dragEndConn then dragEndConn:Disconnect() end
             end)
             return frame
         end
@@ -620,63 +655,6 @@ function SmileUILib:CreateWindow(options)
             frame.Destroying:Connect(function()
                 inputConn:Disconnect()
             end)
-            return frame
-        end
-        function tabAPI:AddColorPicker(cpOptions)
-            local name = cpOptions.name or "Color Picker"
-            local default = cpOptions.default or Color3.fromRGB(255, 255, 255)
-            local callback = cpOptions.callback
-            local height = cpOptions.height or theme.ColorPickerHeight
-            local bgColor = cpOptions.bgColor or theme.AccentVeryDark
-
-            local frame = Instance.new("Frame")
-            frame.Size = UDim2.new(1, -8, 0, height)
-            frame.BackgroundColor3 = bgColor
-            frame.Parent = page
-            local c = Instance.new("UICorner")
-            c.CornerRadius = theme.ElementCornerRadius
-            c.Parent = frame
-            local lbl = Instance.new("TextLabel")
-            lbl.Size = UDim2.new(1, -20, 0, 24)
-            lbl.Position = UDim2.new(0, 12, 0, 6)
-            lbl.BackgroundTransparency = 1
-            lbl.Text = name
-            lbl.TextColor3 = theme.Text
-            lbl.Font = theme.Font
-            lbl.TextSize = 14
-            lbl.TextXAlignment = Enum.TextXAlignment.Left
-            lbl.TextTruncate = Enum.TextTruncate.AtEnd
-            lbl.Parent = frame
-            local preview = Instance.new("Frame")
-            preview.Size = UDim2.new(0, 40, 0, 40)
-            preview.Position = UDim2.new(1, -60, 0, 8)
-            preview.BackgroundColor3 = default
-            preview.Parent = frame
-            local pc = Instance.new("UICorner")
-            pc.CornerRadius = UDim.new(0, 4)
-            pc.Parent = preview
-            -- RGB Sliders
-            local rSlider = tabAPI:AddSlider({name = "R", min = 0, max = 255, default = default.R * 255, height = 58, bgColor = theme.Background})
-            rSlider.Position = UDim2.new(0, 12, 0, 36)
-            rSlider.Parent = frame
-            local gSlider = tabAPI:AddSlider({name = "G", min = 0, max = 255, default = default.G * 255, height = 58, bgColor = theme.Background})
-            gSlider.Position = UDim2.new(0, 12, 0, 36 + 58)
-            gSlider.Parent = frame
-            local bSlider = tabAPI:AddSlider({name = "B", min = 0, max = 255, default = default.B * 255, height = 58, bgColor = theme.Background})
-            bSlider.Position = UDim2.new(0, 12, 0, 36 + 58 * 2)
-            bSlider.Parent = frame
-            -- Wait for sliders to be created
-            local function updateColor()
-                local r = rSlider:FindFirstChild("TextLabel").Text:match("%d+")
-                local g = gSlider:FindFirstChild("TextLabel").Text:match("%d+")
-                local b = bSlider:FindFirstChild("TextLabel").Text:match("%d+")
-                local color = Color3.fromRGB(r, g, b)
-                preview.BackgroundColor3 = color
-                if callback then callback(color) end
-            end
-            rSlider.InputEnded:Connect(updateColor)
-            gSlider.InputEnded:Connect(updateColor)
-            bSlider.InputEnded:Connect(updateColor)
             return frame
         end
         function tabAPI:AddTextbox(tbOptions)
