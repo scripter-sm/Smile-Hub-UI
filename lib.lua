@@ -42,6 +42,8 @@ SmileUILib.Theme = {
     SliderHeight = 58,
     DropdownHeight = 40,
     KeybindHeight = 38,
+    ColorPickerHeight = 180,
+    TextboxHeight = 40,
     SpacerDefaultHeight = 8,
     AnimationSpeed = 0.18,
     NotificationInSpeed = 0.58,
@@ -560,6 +562,7 @@ function SmileUILib:CreateWindow(options)
             local callback = keyOptions.callback
             local height = keyOptions.height or theme.KeybindHeight
             local bgColor = keyOptions.bgColor or theme.AccentVeryDark
+            local allowMouse = keyOptions.allowMouse or false  -- New: allow mouse buttons
 
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -8, 0, height)
@@ -598,20 +601,179 @@ function SmileUILib:CreateWindow(options)
                 listening = true
                 btn.Text = "..."
             end)
-            local conn = UserInputService.InputBegan:Connect(function(input)
-                if not listening then return end
+            local inputConn = UserInputService.InputBegan:Connect(function(input, processed)
+                if processed or not listening then return end
+                listening = false
                 if input.UserInputType == Enum.UserInputType.Keyboard then
-                    listening = false
                     currentKey = input.KeyCode
                     btn.Text = currentKey.Name
-                    if callback then callback(currentKey) end
+                elseif allowMouse and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.MouseButton2 or input.UserInputType == Enum.UserInputType.MouseButton3) then
+                    currentKey = input.UserInputType
+                    btn.Text = currentKey.Name
+                else
+                    btn.Text = currentKey.Name
+                    return
                 end
+                if callback then callback(currentKey) end
             end)
-            -- Disconnect on destroy (optional, but good practice)
+            -- Disconnect on destroy
             frame.Destroying:Connect(function()
-                conn:Disconnect()
+                inputConn:Disconnect()
             end)
             return frame
+        end
+        function tabAPI:AddColorPicker(cpOptions)
+            local name = cpOptions.name or "Color Picker"
+            local default = cpOptions.default or Color3.fromRGB(255, 255, 255)
+            local callback = cpOptions.callback
+            local height = cpOptions.height or theme.ColorPickerHeight
+            local bgColor = cpOptions.bgColor or theme.AccentVeryDark
+
+            local frame = Instance.new("Frame")
+            frame.Size = UDim2.new(1, -8, 0, height)
+            frame.BackgroundColor3 = bgColor
+            frame.Parent = page
+            local c = Instance.new("UICorner")
+            c.CornerRadius = theme.ElementCornerRadius
+            c.Parent = frame
+            local lbl = Instance.new("TextLabel")
+            lbl.Size = UDim2.new(1, -20, 0, 24)
+            lbl.Position = UDim2.new(0, 12, 0, 6)
+            lbl.BackgroundTransparency = 1
+            lbl.Text = name
+            lbl.TextColor3 = theme.Text
+            lbl.Font = theme.Font
+            lbl.TextSize = 14
+            lbl.TextXAlignment = Enum.TextXAlignment.Left
+            lbl.TextTruncate = Enum.TextTruncate.AtEnd
+            lbl.Parent = frame
+            local preview = Instance.new("Frame")
+            preview.Size = UDim2.new(0, 40, 0, 40)
+            preview.Position = UDim2.new(1, -60, 0, 8)
+            preview.BackgroundColor3 = default
+            preview.Parent = frame
+            local pc = Instance.new("UICorner")
+            pc.CornerRadius = UDim.new(0, 4)
+            pc.Parent = preview
+            -- RGB Sliders
+            local rSlider = tabAPI:AddSlider({name = "R", min = 0, max = 255, default = default.R * 255, height = 58, bgColor = theme.Background})
+            rSlider.Position = UDim2.new(0, 12, 0, 36)
+            rSlider.Parent = frame
+            local gSlider = tabAPI:AddSlider({name = "G", min = 0, max = 255, default = default.G * 255, height = 58, bgColor = theme.Background})
+            gSlider.Position = UDim2.new(0, 12, 0, 36 + 58)
+            gSlider.Parent = frame
+            local bSlider = tabAPI:AddSlider({name = "B", min = 0, max = 255, default = default.B * 255, height = 58, bgColor = theme.Background})
+            bSlider.Position = UDim2.new(0, 12, 0, 36 + 58 * 2)
+            bSlider.Parent = frame
+            -- Wait for sliders to be created
+            local function updateColor()
+                local r = rSlider:FindFirstChild("TextLabel").Text:match("%d+")
+                local g = gSlider:FindFirstChild("TextLabel").Text:match("%d+")
+                local b = bSlider:FindFirstChild("TextLabel").Text:match("%d+")
+                local color = Color3.fromRGB(r, g, b)
+                preview.BackgroundColor3 = color
+                if callback then callback(color) end
+            end
+            rSlider.InputEnded:Connect(updateColor)
+            gSlider.InputEnded:Connect(updateColor)
+            bSlider.InputEnded:Connect(updateColor)
+            return frame
+        end
+        function tabAPI:AddTextbox(tbOptions)
+            local name = tbOptions.name or "Textbox"
+            local default = tbOptions.default or ""
+            local callback = tbOptions.callback
+            local height = tbOptions.height or theme.TextboxHeight
+            local bgColor = tbOptions.bgColor or theme.AccentVeryDark
+
+            local frame = Instance.new("Frame")
+            frame.Size = UDim2.new(1, -8, 0, height)
+            frame.BackgroundColor3 = bgColor
+            frame.Parent = page
+            local c = Instance.new("UICorner")
+            c.CornerRadius = theme.ElementCornerRadius
+            c.Parent = frame
+            local lbl = Instance.new("TextLabel")
+            lbl.Size = UDim2.new(0.45, 0, 1, 0)
+            lbl.Position = UDim2.new(0, 14, 0, 0)
+            lbl.BackgroundTransparency = 1
+            lbl.Text = name
+            lbl.TextColor3 = theme.Text
+            lbl.Font = theme.Font
+            lbl.TextSize = 14
+            lbl.TextXAlignment = Enum.TextXAlignment.Left
+            lbl.TextTruncate = Enum.TextTruncate.AtEnd
+            lbl.Parent = frame
+            local textbox = Instance.new("TextBox")
+            textbox.Size = UDim2.new(0.48, 0, 0, 32)
+            textbox.Position = UDim2.new(0.5, 0, 0, 4)
+            textbox.BackgroundColor3 = theme.AccentDarker
+            textbox.Text = default
+            textbox.TextColor3 = theme.Text
+            textbox.Font = theme.Font
+            textbox.TextSize = 14
+            textbox.TextTruncate = Enum.TextTruncate.AtEnd
+            textbox.Parent = frame
+            local tbc = Instance.new("UICorner")
+            tbc.CornerRadius = theme.ElementCornerRadius
+            tbc.Parent = textbox
+            textbox.FocusLost:Connect(function(enterPressed)
+                if enterPressed and callback then
+                    callback(textbox.Text)
+                end
+            end)
+            return frame
+        end
+        -- Add more elements as needed, e.g., ProgressBar, ImageLabel, etc.
+        function tabAPI:AddProgressBar(pbOptions)
+            local name = pbOptions.name or "Progress"
+            local max = pbOptions.max or 100
+            local value = pbOptions.value or 0
+            local height = pbOptions.height or 40
+            local bgColor = pbOptions.bgColor or theme.AccentVeryDark
+
+            local frame = Instance.new("Frame")
+            frame.Size = UDim2.new(1, -8, 0, height)
+            frame.BackgroundColor3 = bgColor
+            frame.Parent = page
+            local c = Instance.new("UICorner")
+            c.CornerRadius = theme.ElementCornerRadius
+            c.Parent = frame
+            local lbl = Instance.new("TextLabel")
+            lbl.Size = UDim2.new(1, -20, 1, 0)
+            lbl.Position = UDim2.new(0, 12, 0, 0)
+            lbl.BackgroundTransparency = 1
+            lbl.Text = name .. ": " .. math.floor((value / max) * 100) .. "%"
+            lbl.TextColor3 = theme.Text
+            lbl.Font = theme.Font
+            lbl.TextSize = 14
+            lbl.TextXAlignment = Enum.TextXAlignment.Left
+            lbl.TextTruncate = Enum.TextTruncate.AtEnd
+            lbl.Parent = frame
+            local track = Instance.new("Frame")
+            track.Size = UDim2.new(1, -24, 0, 8)
+            track.Position = UDim2.new(0, 12, 0, height - 14)
+            track.BackgroundColor3 = theme.AccentDarker
+            track.Parent = frame
+            local tc = Instance.new("UICorner")
+            tc.CornerRadius = UDim.new(1, 0)
+            tc.Parent = track
+            local fill = Instance.new("Frame")
+            fill.Size = UDim2.new(value / max, 0, 1, 0)
+            fill.BackgroundColor3 = theme.Accent
+            fill.Parent = track
+            local fc = Instance.new("UICorner")
+            fc.CornerRadius = UDim.new(1, 0)
+            fc.Parent = fill
+            local api = {}
+            function api:SetValue(newValue)
+                newValue = math.clamp(newValue, 0, max)
+                TweenService:Create(fill, TweenInfo.new(theme.AnimationSpeed), {
+                    Size = UDim2.new(newValue / max, 0, 1, 0)
+                }):Play()
+                lbl.Text = name .. ": " .. math.floor((newValue / max) * 100) .. "%"
+            end
+            return api
         end
         return tabAPI
     end
