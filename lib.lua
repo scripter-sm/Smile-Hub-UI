@@ -13,6 +13,7 @@ local SmileUILib = {}
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
+local HttpService = game:GetService("HttpService")
 SmileUILib.Theme = {
     Background = Color3.fromRGB(0, 0, 0),
     Header = Color3.fromRGB(0, 20, 0),
@@ -260,6 +261,7 @@ function SmileUILib:CreateWindow(options)
         end
     end)
     local window = {}
+    window.Elements = {}
     local activePage = nil
     function window:AddTab(tabOptions)
         local tabName = tabOptions.name or "Tab"
@@ -371,49 +373,6 @@ function SmileUILib:CreateWindow(options)
             spacer.Parent = page
             return spacer
         end
-        function tabAPI:AddToggle(togOptions)
-            local name = togOptions.name or "Toggle"
-            local default = togOptions.default or false
-            local callback = togOptions.callback
-            local height = togOptions.height or theme.ToggleHeight
-            local bgColor = togOptions.bgColor or theme.AccentVeryDark
-            local frame = Instance.new("Frame")
-            frame.Size = UDim2.new(1, -8, 0, height)
-            frame.BackgroundColor3 = bgColor
-            frame.Parent = page
-            local c = Instance.new("UICorner")
-            c.CornerRadius = theme.ElementCornerRadius
-            c.Parent = frame
-            local lbl = Instance.new("TextLabel")
-            lbl.Size = UDim2.new(0.68, 0, 1, 0)
-            lbl.Position = UDim2.new(0, 14, 0, 0)
-            lbl.BackgroundTransparency = 1
-            lbl.Text = name
-            lbl.TextColor3 = theme.Text
-            lbl.Font = theme.Font
-            lbl.TextSize = 14
-            lbl.TextXAlignment = Enum.TextXAlignment.Left
-            lbl.TextTruncate = Enum.TextTruncate.AtEnd
-            lbl.Parent = frame
-            local box = Instance.new("Frame")
-            box.Size = UDim2.new(0, 28, 0, 28)
-            box.Position = UDim2.new(1, -40, 0.5, -14)
-            box.BackgroundColor3 = default and theme.Accent or theme.AccentDarker
-            box.Parent = frame
-            local bc = Instance.new("UICorner")
-            bc.CornerRadius = theme.ElementCornerRadius
-            bc.Parent = box
-            box.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    default = not default
-                    TweenService:Create(box, TweenInfo.new(theme.AnimationSpeed), {
-                        BackgroundColor3 = default and theme.Accent or theme.AccentDarker
-                    }):Play()
-                    if callback then callback(default) end
-                end
-            end)
-            return frame
-        end
         function tabAPI:AddButton(btnOptions)
             local text = btnOptions.text or "Button"
             local callback = btnOptions.callback
@@ -447,6 +406,61 @@ function SmileUILib:CreateWindow(options)
             end)
             return btn
         end
+        function tabAPI:AddToggle(togOptions)
+            local name = togOptions.name or "Toggle"
+            local default = togOptions.default or false
+            local callback = togOptions.callback
+            local height = togOptions.height or theme.ToggleHeight
+            local bgColor = togOptions.bgColor or theme.AccentVeryDark
+            local configKey = togOptions.configKey
+            local frame = Instance.new("Frame")
+            frame.Size = UDim2.new(1, -8, 0, height)
+            frame.BackgroundColor3 = bgColor
+            frame.Parent = page
+            local c = Instance.new("UICorner")
+            c.CornerRadius = theme.ElementCornerRadius
+            c.Parent = frame
+            local lbl = Instance.new("TextLabel")
+            lbl.Size = UDim2.new(0.68, 0, 1, 0)
+            lbl.Position = UDim2.new(0, 14, 0, 0)
+            lbl.BackgroundTransparency = 1
+            lbl.Text = name
+            lbl.TextColor3 = theme.Text
+            lbl.Font = theme.Font
+            lbl.TextSize = 14
+            lbl.TextXAlignment = Enum.TextXAlignment.Left
+            lbl.TextTruncate = Enum.TextTruncate.AtEnd
+            lbl.Parent = frame
+            local box = Instance.new("Frame")
+            box.Size = UDim2.new(0, 28, 0, 28)
+            box.Position = UDim2.new(1, -40, 0.5, -14)
+            box.BackgroundColor3 = default and theme.Accent or theme.AccentDarker
+            box.Parent = frame
+            local bc = Instance.new("UICorner")
+            bc.CornerRadius = theme.ElementCornerRadius
+            bc.Parent = box
+            local state = default
+            local api = {}
+            function api:GetState()
+                return state
+            end
+            function api:SetState(bool)
+                state = bool
+                TweenService:Create(box, TweenInfo.new(theme.AnimationSpeed), {
+                    BackgroundColor3 = state and theme.Accent or theme.AccentDarker
+                }):Play()
+                if callback then callback(state) end
+            end
+            box.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    api:SetState(not state)
+                end
+            end)
+            if configKey then
+                window.Elements[configKey] = {type = "toggle", api = api}
+            end
+            return api
+        end
         function tabAPI:AddSlider(sliderOptions)
             local name = sliderOptions.name or "Slider"
             local min = sliderOptions.min or 0
@@ -456,6 +470,7 @@ function SmileUILib:CreateWindow(options)
             local height = sliderOptions.height or theme.SliderHeight
             local bgColor = sliderOptions.bgColor or theme.AccentVeryDark
             local step = sliderOptions.step or 1
+            local configKey = sliderOptions.configKey
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -8, 0, height)
             frame.BackgroundColor3 = bgColor
@@ -489,6 +504,19 @@ function SmileUILib:CreateWindow(options)
             local fc = Instance.new("UICorner")
             fc.CornerRadius = UDim.new(1, 0)
             fc.Parent = fill
+            local value = default
+            local api = {}
+            function api:GetValue()
+                return value
+            end
+            function api:SetValue(newVal)
+                newVal = math.clamp(newVal, min, max)
+                newVal = math.floor((newVal / step) + 0.5) * step
+                value = newVal
+                fill.Size = UDim2.new((value - min) / (max - min), 0, 1, 0)
+                lbl.Text = name .. ": " .. value
+                if callback then callback(value) end
+            end
             local dragging = false
             local dragInputConn
             local dragEndConn
@@ -499,12 +527,8 @@ function SmileUILib:CreateWindow(options)
                         if not dragging then return end
                         if input2.UserInputType == Enum.UserInputType.MouseMovement or input2.UserInputType == Enum.UserInputType.Touch then
                             local rel = math.clamp((input2.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
-                            fill.Size = UDim2.new(rel, 0, 1, 0)
                             local rawValue = min + (max - min) * rel
-                            local value = math.floor((rawValue / step) + 0.5) * step
-                            value = math.clamp(value, min, max)
-                            lbl.Text = name .. ": " .. value
-                            if callback then callback(value) end
+                            api:SetValue(rawValue)
                         end
                     end)
                     dragEndConn = UserInputService.InputEnded:Connect(function(input2)
@@ -520,7 +544,10 @@ function SmileUILib:CreateWindow(options)
                 if dragInputConn then dragInputConn:Disconnect() end
                 if dragEndConn then dragEndConn:Disconnect() end
             end)
-            return frame
+            if configKey then
+                window.Elements[configKey] = {type = "slider", api = api}
+            end
+            return api
         end
         function tabAPI:AddDropdown(dropOptions)
             local name = dropOptions.name or "Dropdown"
@@ -529,6 +556,7 @@ function SmileUILib:CreateWindow(options)
             local callback = dropOptions.callback
             local height = dropOptions.height or theme.DropdownHeight
             local bgColor = dropOptions.bgColor or theme.AccentVeryDark
+            local configKey = dropOptions.configKey
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -8, 0, height)
             frame.BackgroundColor3 = bgColor
@@ -567,13 +595,32 @@ function SmileUILib:CreateWindow(options)
                     break
                 end
             end
+            local selection = options[current]
+            local api = {}
+            function api:GetSelection()
+                return selection
+            end
+            function api:SetSelection(choice)
+                for i, v in ipairs(options) do
+                    if v == choice then
+                        current = i
+                        selection = choice
+                        selected.Text = choice
+                        if callback then callback(selection) end
+                        return
+                    end
+                end
+            end
             selected.MouseButton1Click:Connect(function()
                 current = (current % #options) + 1
-                local choice = options[current]
-                selected.Text = choice
-                if callback then callback(choice) end
+                selection = options[current]
+                selected.Text = selection
+                if callback then callback(selection) end
             end)
-            return frame
+            if configKey then
+                window.Elements[configKey] = {type = "dropdown", api = api}
+            end
+            return api
         end
         function tabAPI:AddKeybind(keyOptions)
             local name = keyOptions.name or "Keybind"
@@ -582,6 +629,7 @@ function SmileUILib:CreateWindow(options)
             local height = keyOptions.height or theme.KeybindHeight
             local bgColor = keyOptions.bgColor or theme.AccentVeryDark
             local allowMouse = keyOptions.allowMouse or false
+            local configKey = keyOptions.configKey
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -8, 0, height)
             frame.BackgroundColor3 = bgColor
@@ -615,6 +663,15 @@ function SmileUILib:CreateWindow(options)
             bc.Parent = btn
             local listening = false
             local currentKey = defaultKey
+            local api = {}
+            function api:GetKey()
+                return currentKey
+            end
+            function api:SetKey(key)
+                currentKey = key
+                btn.Text = currentKey.Name
+                if callback then callback(currentKey) end
+            end
             btn.MouseButton1Click:Connect(function()
                 listening = true
                 btn.Text = "..."
@@ -623,21 +680,21 @@ function SmileUILib:CreateWindow(options)
                 if processed or not listening then return end
                 listening = false
                 if input.UserInputType == Enum.UserInputType.Keyboard then
-                    currentKey = input.KeyCode
-                    btn.Text = currentKey.Name
+                    api:SetKey(input.KeyCode)
                 elseif allowMouse and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.MouseButton2 or input.UserInputType == Enum.UserInputType.MouseButton3) then
-                    currentKey = input.UserInputType
-                    btn.Text = currentKey.Name
+                    api:SetKey(input.UserInputType)
                 else
                     btn.Text = currentKey.Name
                     return
                 end
-                if callback then callback(currentKey) end
             end)
             frame.Destroying:Connect(function()
                 inputConn:Disconnect()
             end)
-            return frame
+            if configKey then
+                window.Elements[configKey] = {type = "keybind", api = api}
+            end
+            return api
         end
         function tabAPI:AddTextbox(tbOptions)
             local name = tbOptions.name or "Textbox"
@@ -645,6 +702,7 @@ function SmileUILib:CreateWindow(options)
             local callback = tbOptions.callback
             local height = tbOptions.height or theme.TextboxHeight
             local bgColor = tbOptions.bgColor or theme.AccentVeryDark
+            local configKey = tbOptions.configKey
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -8, 0, height)
             frame.BackgroundColor3 = bgColor
@@ -676,12 +734,27 @@ function SmileUILib:CreateWindow(options)
             local tbc = Instance.new("UICorner")
             tbc.CornerRadius = theme.ElementCornerRadius
             tbc.Parent = textbox
+            local text = default
+            local api = {}
+            function api:GetText()
+                return text
+            end
+            function api:SetText(newText)
+                text = newText
+                textbox.Text = newText
+                if callback then callback(text) end
+            end
             textbox.FocusLost:Connect(function(enterPressed)
-                if enterPressed and callback then
-                    callback(textbox.Text)
+                if enterPressed then
+                    api:SetText(textbox.Text)
+                else
+                    textbox.Text = text
                 end
             end)
-            return frame
+            if configKey then
+                window.Elements[configKey] = {type = "textbox", api = api}
+            end
+            return api
         end
         function tabAPI:AddProgressBar(pbOptions)
             local name = pbOptions.name or "Progress"
@@ -689,6 +762,7 @@ function SmileUILib:CreateWindow(options)
             local value = pbOptions.value or 0
             local height = pbOptions.height or 40
             local bgColor = pbOptions.bgColor or theme.AccentVeryDark
+            local configKey = pbOptions.configKey
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -8, 0, height)
             frame.BackgroundColor3 = bgColor
@@ -729,17 +803,72 @@ function SmileUILib:CreateWindow(options)
             local fc = Instance.new("UICorner")
             fc.CornerRadius = UDim.new(1, 0)
             fc.Parent = fill
+            local curValue = value
             local api = {}
+            function api:GetValue()
+                return curValue
+            end
             function api:SetValue(newValue)
                 newValue = math.clamp(newValue, 0, max)
+                curValue = newValue
                 TweenService:Create(fill, TweenInfo.new(theme.AnimationSpeed, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
                     Size = UDim2.new(newValue / max, 0, 1, 0)
                 }):Play()
                 lbl.Text = name .. ": " .. math.floor((newValue / max) * 100) .. "%"
             end
+            if configKey then
+                window.Elements[configKey] = {type = "progress", api = api}
+            end
             return api
         end
         return tabAPI
+    end
+    function window:SaveConfig(name)
+        if not isfolder("Smile Hub GUI") then
+            makefolder("Smile Hub GUI")
+        end
+        local cfg = {}
+        for key, el in pairs(self.Elements) do
+            if el.type == "toggle" then
+                cfg[key] = el.api:GetState()
+            elseif el.type == "slider" then
+                cfg[key] = el.api:GetValue()
+            elseif el.type == "dropdown" then
+                cfg[key] = el.api:GetSelection()
+            elseif el.type == "keybind" then
+                cfg[key] = {EnumType = el.api:GetKey().EnumType.Name, Name = el.api:GetKey().Name}
+            elseif el.type == "textbox" then
+                cfg[key] = el.api:GetText()
+            elseif el.type == "progress" then
+                cfg[key] = el.api:GetValue()
+            end
+        end
+        local json = HttpService:JSONEncode(cfg)
+        writefile("Smile Hub GUI/" .. name .. ".json", json)
+    end
+    function window:LoadConfig(name)
+        if not isfile("Smile Hub GUI/" .. name .. ".json") then return end
+        local json = readfile("Smile Hub GUI/" .. name .. ".json")
+        local cfg = HttpService:JSONDecode(json)
+        for key, val in pairs(cfg) do
+            local el = self.Elements[key]
+            if el then
+                if el.type == "toggle" then
+                    el.api:SetState(val)
+                elseif el.type == "slider" then
+                    el.api:SetValue(val)
+                elseif el.type == "dropdown" then
+                    el.api:SetSelection(val)
+                elseif el.type == "keybind" then
+                    local enum = Enum[val.EnumType][val.Name]
+                    el.api:SetKey(enum)
+                elseif el.type == "textbox" then
+                    el.api:SetText(val)
+                elseif el.type == "progress" then
+                    el.api:SetValue(val)
+                end
+            end
+        end
     end
     main.Size = UDim2.new(0, 0, 0, 0)
     main.BackgroundTransparency = 1
