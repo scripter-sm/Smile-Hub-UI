@@ -50,6 +50,7 @@ SmileUILib.Theme = {
 
 SmileUILib.Windows = {}
 SmileUILib.ThemeableElements = {}
+SmileUILib.ButtonRegistry = {} -- Store buttons for hover color updates
 
 local function RegisterElement(windowId, element, property, themeKey)
     if not SmileUILib.ThemeableElements[windowId] then
@@ -62,17 +63,41 @@ local function RegisterElement(windowId, element, property, themeKey)
     })
 end
 
+-- Register button for hover color updates
+local function RegisterButton(windowId, button, isAccentButton)
+    if not SmileUILib.ButtonRegistry[windowId] then
+        SmileUILib.ButtonRegistry[windowId] = {}
+    end
+    table.insert(SmileUILib.ButtonRegistry[windowId], {
+        Button = button,
+        IsAccentButton = isAccentButton -- true for AccentDarker buttons, false for regular
+    })
+end
+
 function SmileUILib:SetTheme(newTheme)
     for key, value in pairs(newTheme) do
         self.Theme[key] = value
     end
     
+    -- Update all registered elements
     for windowId, elements in pairs(self.ThemeableElements) do
         for _, data in ipairs(elements) do
             if data.Element and data.Element.Parent then
                 local color = self.Theme[data.ThemeKey]
                 if color then
                     data.Element[data.Property] = color
+                end
+            end
+        end
+    end
+    
+    -- Update button hover colors
+    for windowId, buttons in pairs(self.ButtonRegistry) do
+        for _, data in ipairs(buttons) do
+            if data.Button and data.Button.Parent then
+                -- Update current background to match new theme
+                if data.IsAccentButton then
+                    data.Button.BackgroundColor3 = self.Theme.AccentDarker
                 end
             end
         end
@@ -546,12 +571,10 @@ function SmileUILib:CreateWindow(options)
             local text = btnOptions.text or "Button"
             local callback = btnOptions.callback
             local height = btnOptions.height or theme.ButtonHeight
-            local bgColor = btnOptions.bgColor or theme.AccentDarker
-            local hoverColor = btnOptions.hoverColor or theme.Accent
             
             local btn = Instance.new("TextButton")
             btn.Size = UDim2.new(1, -8, 0, height)
-            btn.BackgroundColor3 = bgColor
+            btn.BackgroundColor3 = theme.AccentDarker
             btn.Text = text
             btn.TextColor3 = theme.Text
             btn.Font = theme.Font
@@ -561,6 +584,7 @@ function SmileUILib:CreateWindow(options)
             
             RegisterElement(windowId, btn, "BackgroundColor3", "AccentDarker")
             RegisterElement(windowId, btn, "TextColor3", "Text")
+            RegisterButton(windowId, btn, true) -- Register for hover updates
             
             local c = Instance.new("UICorner")
             c.CornerRadius = theme.ElementCornerRadius
@@ -572,13 +596,13 @@ function SmileUILib:CreateWindow(options)
             
             btn.MouseEnter:Connect(function()
                 TweenService:Create(btn, TweenInfo.new(theme.AnimationSpeed), {
-                    BackgroundColor3 = hoverColor
+                    BackgroundColor3 = SmileUILib.Theme.Accent
                 }):Play()
             end)
             
             btn.MouseLeave:Connect(function()
                 TweenService:Create(btn, TweenInfo.new(theme.AnimationSpeed), {
-                    BackgroundColor3 = bgColor
+                    BackgroundColor3 = SmileUILib.Theme.AccentDarker
                 }):Play()
             end)
             
@@ -639,7 +663,7 @@ function SmileUILib:CreateWindow(options)
             function api:SetState(bool)
                 state = bool
                 TweenService:Create(box, TweenInfo.new(theme.AnimationSpeed), {
-                    BackgroundColor3 = state and theme.Accent or theme.AccentDarker
+                    BackgroundColor3 = state and SmileUILib.Theme.Accent or SmileUILib.Theme.AccentDarker
                 }):Play()
                 
                 RegisterElement(windowId, box, "BackgroundColor3", state and "Accent" or "AccentDarker")
@@ -809,6 +833,7 @@ function SmileUILib:CreateWindow(options)
             
             RegisterElement(windowId, selected, "BackgroundColor3", "AccentDarker")
             RegisterElement(windowId, selected, "TextColor3", "Text")
+            RegisterButton(windowId, selected, true)
             
             local sc = Instance.new("UICorner")
             sc.CornerRadius = theme.ElementCornerRadius
@@ -846,6 +871,18 @@ function SmileUILib:CreateWindow(options)
                 selection = options[current]
                 selected.Text = selection
                 if callback then callback(selection) end
+            end)
+            
+            selected.MouseEnter:Connect(function()
+                TweenService:Create(selected, TweenInfo.new(theme.AnimationSpeed), {
+                    BackgroundColor3 = SmileUILib.Theme.Accent
+                }):Play()
+            end)
+            
+            selected.MouseLeave:Connect(function()
+                TweenService:Create(selected, TweenInfo.new(theme.AnimationSpeed), {
+                    BackgroundColor3 = SmileUILib.Theme.AccentDarker
+                }):Play()
             end)
             
             return api
@@ -897,6 +934,7 @@ function SmileUILib:CreateWindow(options)
             
             RegisterElement(windowId, btn, "BackgroundColor3", "AccentDarker")
             RegisterElement(windowId, btn, "TextColor3", "Text")
+            RegisterButton(windowId, btn, true)
             
             local bc = Instance.new("UICorner")
             bc.CornerRadius = theme.ElementCornerRadius
@@ -931,6 +969,22 @@ function SmileUILib:CreateWindow(options)
                 else
                     btn.Text = currentKey.Name
                     return
+                end
+            end)
+            
+            btn.MouseEnter:Connect(function()
+                if not listening then
+                    TweenService:Create(btn, TweenInfo.new(theme.AnimationSpeed), {
+                        BackgroundColor3 = SmileUILib.Theme.Accent
+                    }):Play()
+                end
+            end)
+            
+            btn.MouseLeave:Connect(function()
+                if not listening then
+                    TweenService:Create(btn, TweenInfo.new(theme.AnimationSpeed), {
+                        BackgroundColor3 = SmileUILib.Theme.AccentDarker
+                    }):Play()
                 end
             end)
             
@@ -1097,13 +1151,13 @@ function SmileUILib:CreateWindow(options)
             return api
         end
         
-        -- MODAL COLOR PICKER - Opens when clicking a button
+        -- FIXED MODAL COLOR PICKER - Properly aligned button
         function tabAPI:AddColorPicker(cpOptions)
             local name = cpOptions.name or "Color Picker"
             local default = cpOptions.default or Color3.fromRGB(0, 255, 0)
             local callback = cpOptions.callback
             
-            -- Main container frame (compact button view)
+            -- Main container frame - FIXED HEIGHT
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -8, 0, 40)
             frame.BackgroundColor3 = theme.AccentVeryDark
@@ -1115,9 +1169,9 @@ function SmileUILib:CreateWindow(options)
             c.CornerRadius = theme.ElementCornerRadius
             c.Parent = frame
             
-            -- Label
+            -- Label - LEFT SIDE
             local lbl = Instance.new("TextLabel")
-            lbl.Size = UDim2.new(0.6, 0, 1, 0)
+            lbl.Size = UDim2.new(0.5, -10, 1, 0)
             lbl.Position = UDim2.new(0, 14, 0, 0)
             lbl.BackgroundTransparency = 1
             lbl.Text = name
@@ -1130,10 +1184,10 @@ function SmileUILib:CreateWindow(options)
             
             RegisterElement(windowId, lbl, "TextColor3", "Text")
             
-            -- Current color preview box
+            -- Color preview box - RIGHT SIDE before button
             local previewBox = Instance.new("Frame")
-            previewBox.Size = UDim2.new(0, 32, 0, 32)
-            previewBox.Position = UDim2.new(1, -90, 0.5, -16)
+            previewBox.Size = UDim2.new(0, 28, 0, 28)
+            previewBox.Position = UDim2.new(1, -90, 0.5, -14)
             previewBox.BackgroundColor3 = default
             previewBox.BorderSizePixel = 2
             previewBox.BorderColor3 = theme.StrokeColor
@@ -1143,10 +1197,10 @@ function SmileUILib:CreateWindow(options)
             pbc.CornerRadius = UDim.new(0, 4)
             pbc.Parent = previewBox
             
-            -- Open button
+            -- Open button - FAR RIGHT
             local openBtn = Instance.new("TextButton")
             openBtn.Size = UDim2.new(0, 70, 0, 28)
-            openBtn.Position = UDim2.new(1, -80, 0.5, -14)
+            openBtn.Position = UDim2.new(1, -78, 0.5, -14)
             openBtn.BackgroundColor3 = theme.AccentDarker
             openBtn.Text = "Pick"
             openBtn.TextColor3 = theme.Text
@@ -1156,21 +1210,22 @@ function SmileUILib:CreateWindow(options)
             
             RegisterElement(windowId, openBtn, "BackgroundColor3", "AccentDarker")
             RegisterElement(windowId, openBtn, "TextColor3", "Text")
+            RegisterButton(windowId, openBtn, true)
             
             local obc = Instance.new("UICorner")
             obc.CornerRadius = UDim.new(0, 4)
             obc.Parent = openBtn
             
-            -- Hover effects for open button
+            -- Hover effects using current theme
             openBtn.MouseEnter:Connect(function()
                 TweenService:Create(openBtn, TweenInfo.new(0.2), {
-                    BackgroundColor3 = theme.Accent
+                    BackgroundColor3 = SmileUILib.Theme.Accent
                 }):Play()
             end)
             
             openBtn.MouseLeave:Connect(function()
                 TweenService:Create(openBtn, TweenInfo.new(0.2), {
-                    BackgroundColor3 = theme.AccentDarker
+                    BackgroundColor3 = SmileUILib.Theme.AccentDarker
                 }):Play()
             end)
             
@@ -1201,12 +1256,11 @@ function SmileUILib:CreateWindow(options)
                 
                 modalOpen = true
                 
-                -- Create modal background overlay
                 local overlay = Instance.new("Frame")
                 overlay.Name = "ColorPickerModal"
                 overlay.Size = UDim2.new(0, 280, 0, 320)
                 overlay.Position = UDim2.new(0, frame.AbsolutePosition.X + frame.AbsoluteSize.X - 280, 0, frame.AbsolutePosition.Y + 45)
-                overlay.BackgroundColor3 = theme.Background
+                overlay.BackgroundColor3 = SmileUILib.Theme.Background
                 overlay.BorderSizePixel = 0
                 overlay.ZIndex = 100
                 overlay.Parent = screen
@@ -1218,14 +1272,14 @@ function SmileUILib:CreateWindow(options)
                 oc.Parent = overlay
                 
                 local os = Instance.new("UIStroke")
-                os.Color = theme.StrokeColor
+                os.Color = SmileUILib.Theme.StrokeColor
                 os.Thickness = 2
                 os.Parent = overlay
                 
                 -- Header
                 local mHeader = Instance.new("Frame")
                 mHeader.Size = UDim2.new(1, 0, 0, 32)
-                mHeader.BackgroundColor3 = theme.Header
+                mHeader.BackgroundColor3 = SmileUILib.Theme.Header
                 mHeader.BorderSizePixel = 0
                 mHeader.ZIndex = 101
                 mHeader.Parent = overlay
@@ -1239,8 +1293,8 @@ function SmileUILib:CreateWindow(options)
                 mTitle.Position = UDim2.new(0, 12, 0, 0)
                 mTitle.BackgroundTransparency = 1
                 mTitle.Text = "Pick a Color"
-                mTitle.TextColor3 = theme.Text
-                mTitle.Font = theme.Font
+                mTitle.TextColor3 = SmileUILib.Theme.Text
+                mTitle.Font = SmileUILib.Theme.Font
                 mTitle.TextSize = 16
                 mTitle.TextXAlignment = Enum.TextXAlignment.Left
                 mTitle.ZIndex = 102
@@ -1252,18 +1306,19 @@ function SmileUILib:CreateWindow(options)
                 closeBtn.Position = UDim2.new(1, -32, 0, 2)
                 closeBtn.BackgroundTransparency = 1
                 closeBtn.Text = "×"
-                closeBtn.TextColor3 = theme.Text
-                closeBtn.Font = theme.Font
+                closeBtn.TextColor3 = SmileUILib.Theme.Text
+                closeBtn.Font = SmileUILib.Theme.Font
                 closeBtn.TextSize = 24
                 closeBtn.ZIndex = 102
                 closeBtn.Parent = mHeader
                 
                 closeBtn.MouseButton1Click:Connect(closeModal)
                 
-                -- Color Spectrum (Saturation/Value box)
+                -- Color variables
                 local h, s, v = Color3ToHSV(default)
                 local currentColor = default
                 
+                -- Spectrum
                 local spectrumFrame = Instance.new("Frame")
                 spectrumFrame.Size = UDim2.new(0, 200, 0, 140)
                 spectrumFrame.Position = UDim2.new(0, 12, 0, 44)
@@ -1276,7 +1331,6 @@ function SmileUILib:CreateWindow(options)
                 sfc.CornerRadius = UDim.new(0, 4)
                 sfc.Parent = spectrumFrame
                 
-                -- Saturation gradient
                 local satGradient = Instance.new("UIGradient")
                 satGradient.Color = ColorSequence.new({
                     ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
@@ -1284,7 +1338,6 @@ function SmileUILib:CreateWindow(options)
                 })
                 satGradient.Parent = spectrumFrame
                 
-                -- Value overlay
                 local valOverlay = Instance.new("Frame")
                 valOverlay.Size = UDim2.new(1, 0, 1, 0)
                 valOverlay.BackgroundTransparency = 0
@@ -1308,7 +1361,7 @@ function SmileUILib:CreateWindow(options)
                 valGradient.Rotation = 90
                 valGradient.Parent = valOverlay
                 
-                -- Selection cursor
+                -- Cursor
                 local cursor = Instance.new("Frame")
                 cursor.Size = UDim2.new(0, 10, 0, 10)
                 cursor.Position = UDim2.new(s, -5, 1 - v, -5)
@@ -1347,7 +1400,6 @@ function SmileUILib:CreateWindow(options)
                 })
                 hueGradient.Parent = hueFrame
                 
-                -- Hue cursor
                 local hueCursor = Instance.new("Frame")
                 hueCursor.Size = UDim2.new(0, 6, 1, 4)
                 hueCursor.Position = UDim2.new(h, -3, 0, -2)
@@ -1357,11 +1409,7 @@ function SmileUILib:CreateWindow(options)
                 hueCursor.ZIndex = 102
                 hueCursor.Parent = hueFrame
                 
-                local hcc = Instance.new("UICorner")
-                hcc.CornerRadius = UDim.new(0, 3)
-                hcc.Parent = hueCursor
-                
-                -- Preview and RGB section
+                -- Preview section
                 local previewSection = Instance.new("Frame")
                 previewSection.Size = UDim2.new(0, 50, 0, 140)
                 previewSection.Position = UDim2.new(0, 220, 0, 44)
@@ -1369,12 +1417,11 @@ function SmileUILib:CreateWindow(options)
                 previewSection.ZIndex = 101
                 previewSection.Parent = overlay
                 
-                -- Large preview
                 local bigPreview = Instance.new("Frame")
                 bigPreview.Size = UDim2.new(1, 0, 0, 50)
                 bigPreview.BackgroundColor3 = currentColor
                 bigPreview.BorderSizePixel = 2
-                bigPreview.BorderColor3 = theme.StrokeColor
+                bigPreview.BorderColor3 = SmileUILib.Theme.StrokeColor
                 bigPreview.ZIndex = 101
                 bigPreview.Parent = previewSection
                 
@@ -1388,8 +1435,8 @@ function SmileUILib:CreateWindow(options)
                 rLabel.Position = UDim2.new(0, 0, 0, 58)
                 rLabel.BackgroundTransparency = 1
                 rLabel.Text = "R: 0"
-                rLabel.TextColor3 = theme.Text
-                rLabel.Font = theme.Font
+                rLabel.TextColor3 = SmileUILib.Theme.Text
+                rLabel.Font = SmileUILib.Theme.Font
                 rLabel.TextSize = 11
                 rLabel.TextXAlignment = Enum.TextXAlignment.Left
                 rLabel.ZIndex = 101
@@ -1400,8 +1447,8 @@ function SmileUILib:CreateWindow(options)
                 gLabel.Position = UDim2.new(0, 0, 0, 76)
                 gLabel.BackgroundTransparency = 1
                 gLabel.Text = "G: 255"
-                gLabel.TextColor3 = theme.Text
-                gLabel.Font = theme.Font
+                gLabel.TextColor3 = SmileUILib.Theme.Text
+                gLabel.Font = SmileUILib.Theme.Font
                 gLabel.TextSize = 11
                 gLabel.TextXAlignment = Enum.TextXAlignment.Left
                 gLabel.ZIndex = 101
@@ -1412,21 +1459,20 @@ function SmileUILib:CreateWindow(options)
                 bLabel.Position = UDim2.new(0, 0, 0, 94)
                 bLabel.BackgroundTransparency = 1
                 bLabel.Text = "B: 0"
-                bLabel.TextColor3 = theme.Text
-                bLabel.Font = theme.Font
+                bLabel.TextColor3 = SmileUILib.Theme.Text
+                bLabel.Font = SmileUILib.Theme.Font
                 bLabel.TextSize = 11
                 bLabel.TextXAlignment = Enum.TextXAlignment.Left
                 bLabel.ZIndex = 101
                 bLabel.Parent = previewSection
                 
-                -- Hex display
                 local hexLabel = Instance.new("TextLabel")
                 hexLabel.Size = UDim2.new(1, 0, 0, 20)
                 hexLabel.Position = UDim2.new(0, 0, 0, 118)
                 hexLabel.BackgroundTransparency = 1
                 hexLabel.Text = "#00FF00"
-                hexLabel.TextColor3 = theme.TextDim
-                hexLabel.Font = theme.Font
+                hexLabel.TextColor3 = SmileUILib.Theme.TextDim
+                hexLabel.Font = SmileUILib.Theme.Font
                 hexLabel.TextSize = 10
                 hexLabel.TextXAlignment = Enum.TextXAlignment.Center
                 hexLabel.ZIndex = 101
@@ -1436,10 +1482,10 @@ function SmileUILib:CreateWindow(options)
                 local confirmBtn = Instance.new("TextButton")
                 confirmBtn.Size = UDim2.new(0, 120, 0, 32)
                 confirmBtn.Position = UDim2.new(0.5, -60, 0, 270)
-                confirmBtn.BackgroundColor3 = theme.Accent
+                confirmBtn.BackgroundColor3 = SmileUILib.Theme.Accent
                 confirmBtn.Text = "Apply Color"
                 confirmBtn.TextColor3 = Color3.new(0, 0, 0)
-                confirmBtn.Font = theme.Font
+                confirmBtn.Font = SmileUILib.Theme.Font
                 confirmBtn.TextSize = 14
                 confirmBtn.ZIndex = 101
                 confirmBtn.Parent = overlay
@@ -1464,7 +1510,7 @@ function SmileUILib:CreateWindow(options)
                     hexLabel.Text = string.format("#%02X%02X%02X", r, g, b)
                 end
                 
-                -- Spectrum dragging
+                -- Dragging logic
                 local spectrumDragging = false
                 spectrumFrame.InputBegan:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -1489,7 +1535,6 @@ function SmileUILib:CreateWindow(options)
                     end
                 end)
                 
-                -- Hue dragging
                 local hueDragging = false
                 hueFrame.InputBegan:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -1525,7 +1570,7 @@ function SmileUILib:CreateWindow(options)
                     end
                 end)
                 
-                -- Confirm button
+                -- Confirm
                 confirmBtn.MouseButton1Click:Connect(function()
                     if callback then callback(currentColor) end
                     closeModal()
@@ -1538,17 +1583,17 @@ function SmileUILib:CreateWindow(options)
                 
                 confirmBtn.MouseEnter:Connect(function()
                     TweenService:Create(confirmBtn, TweenInfo.new(0.2), {
-                        BackgroundColor3 = theme.AccentDark
+                        BackgroundColor3 = SmileUILib.Theme.AccentDark
                     }):Play()
                 end)
                 
                 confirmBtn.MouseLeave:Connect(function()
                     TweenService:Create(confirmBtn, TweenInfo.new(0.2), {
-                        BackgroundColor3 = theme.Accent
+                        BackgroundColor3 = SmileUILib.Theme.Accent
                     }):Play()
                 end)
                 
-                -- Animation in
+                -- Animation
                 overlay.Size = UDim2.new(0, 280, 0, 0)
                 overlay.BackgroundTransparency = 1
                 TweenService:Create(overlay, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
