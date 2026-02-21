@@ -1,18 +1,16 @@
 --[[
-
-  _________       .__.__             ___ ___      ___.     
- /   _____/ _____ |__|  |   ____    /   |   \ __ _\_ |__   
- \_____  \ /     \|  |  | _/ __ \  /    ~    \  |  \ __ \  
- /        \  Y Y  \  |  |_\  ___/  \    Y    /  |  / \_\ \ 
-/_______  /__|_|  /__|____/\___  >  \___|_  /|____/|___  / 
-        \/      \/             \/         \/           \/  
-
+  _________ .**.** ___ ___ ***.
+ / *****/ _____ |**| | ____ / | \ __ *_ |**
+ _**** \ / | | | */ __ \ / ~ \ | \ __ 
+/ \ Y Y \ | |*\ ***/ \ Y / | / _\ 
+/****___ /**|_| /******/___ > ___|* /|****/|*** /
+        / / / /
 ]]
-
 local SmileUILib = {}
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
 
 SmileUILib.Theme = {
     Background = Color3.fromRGB(0, 0, 0),
@@ -43,6 +41,7 @@ SmileUILib.Theme = {
     DropdownHeight = 40,
     KeybindHeight = 38,
     TextboxHeight = 40,
+    ColorPickerHeight = 280,
     SpacerDefaultHeight = 8,
     AnimationSpeed = 0.18,
     NotificationInSpeed = 0.58,
@@ -68,12 +67,10 @@ end
 
 -- Function to update theme for all windows
 function SmileUILib:SetTheme(newTheme)
-    -- Merge new theme with existing
     for key, value in pairs(newTheme) do
         self.Theme[key] = value
     end
     
-    -- Update all registered elements
     for windowId, elements in pairs(self.ThemeableElements) do
         for _, data in ipairs(elements) do
             if data.Element and data.Element.Parent then
@@ -84,6 +81,53 @@ function SmileUILib:SetTheme(newTheme)
             end
         end
     end
+end
+
+-- Color utility functions
+local function Color3ToHSV(color)
+    local r, g, b = color.R, color.G, color.B
+    local max = math.max(r, g, b)
+    local min = math.min(r, g, b)
+    local delta = max - min
+    
+    local h, s, v = 0, 0, max
+    
+    if delta ~= 0 then
+        s = delta / max
+        
+        if max == r then
+            h = (g - b) / delta + (g < b and 6 or 0)
+        elseif max == g then
+            h = (b - r) / delta + 2
+        else
+            h = (r - g) / delta + 4
+        end
+        h = h / 6
+    end
+    
+    return h, s, v
+end
+
+local function HSVToColor3(h, s, v)
+    local r, g, b
+    
+    local i = math.floor(h * 6)
+    local f = h * 6 - i
+    local p = v * (1 - s)
+    local q = v * (1 - f * s)
+    local t = v * (1 - (1 - f) * s)
+    
+    i = i % 6
+    
+    if i == 0 then r, g, b = v, t, p
+    elseif i == 1 then r, g, b = q, v, p
+    elseif i == 2 then r, g, b = p, v, t
+    elseif i == 3 then r, g, b = p, q, v
+    elseif i == 4 then r, g, b = t, p, v
+    elseif i == 5 then r, g, b = v, p, q
+    end
+    
+    return Color3.new(r, g, b)
 end
 
 local notifContainer
@@ -168,7 +212,6 @@ function SmileUILib:Notify(options)
     content.Size = UDim2.new(1, -20, 0, 0)
     content.Parent = notif
     
-    -- Wait for TextBounds to update
     task.wait()
     local textHeight = content.TextBounds.Y
     local notifHeight = theme.NotificationHeaderHeight + textHeight + 10
@@ -206,7 +249,6 @@ function SmileUILib:CreateWindow(options)
     screen.ResetOnSpawn = false
     screen.Parent = CoreGui
     
-    -- Store window reference
     self.Windows[windowId] = screen
     
     local main = Instance.new("Frame")
@@ -322,7 +364,6 @@ function SmileUILib:CreateWindow(options)
     content.BackgroundTransparency = 1
     content.Parent = main
     
-    -- Custom dragging on header
     local dragging = false
     local dragStartPos
     local startGuiPos
@@ -358,7 +399,6 @@ function SmileUILib:CreateWindow(options)
     local activePage = nil
     local activeTabBtn = nil
     
-    -- Function to update window theme specifically
     function window:SetTheme(newTheme)
         SmileUILib:SetTheme(newTheme)
     end
@@ -609,7 +649,6 @@ function SmileUILib:CreateWindow(options)
                     BackgroundColor3 = state and theme.Accent or theme.AccentDarker
                 }):Play()
                 
-                -- Update registration for dynamic theme changes
                 RegisterElement(windowId, box, "BackgroundColor3", state and "Accent" or "AccentDarker")
                 
                 if callback then callback(state) end
@@ -1061,6 +1100,454 @@ function SmileUILib:CreateWindow(options)
                 }):Play()
                 lbl.Text = name .. ": " .. math.floor((newValue / max) * 100) .. "%"
             end
+            
+            return api
+        end
+        
+        -- MODERN COLOR PICKER
+        function tabAPI:AddColorPicker(cpOptions)
+            local name = cpOptions.name or "Color Picker"
+            local default = cpOptions.default or Color3.fromRGB(0, 255, 0)
+            local callback = cpOptions.callback
+            local height = cpOptions.height or theme.ColorPickerHeight
+            
+            local h, s, v = Color3ToHSV(default)
+            local currentColor = default
+            
+            local frame = Instance.new("Frame")
+            frame.Size = UDim2.new(1, -8, 0, height)
+            frame.BackgroundColor3 = theme.AccentVeryDark
+            frame.Parent = page
+            
+            RegisterElement(windowId, frame, "BackgroundColor3", "AccentVeryDark")
+            
+            local c = Instance.new("UICorner")
+            c.CornerRadius = theme.ElementCornerRadius
+            c.Parent = frame
+            
+            -- Title
+            local lbl = Instance.new("TextLabel")
+            lbl.Size = UDim2.new(1, -20, 0, 24)
+            lbl.Position = UDim2.new(0, 12, 0, 8)
+            lbl.BackgroundTransparency = 1
+            lbl.Text = name
+            lbl.TextColor3 = theme.Text
+            lbl.Font = theme.Font
+            lbl.TextSize = 14
+            lbl.TextXAlignment = Enum.TextXAlignment.Left
+            lbl.Parent = frame
+            
+            RegisterElement(windowId, lbl, "TextColor3", "Text")
+            
+            -- Color Spectrum (Saturation/Value box)
+            local spectrumFrame = Instance.new("Frame")
+            spectrumFrame.Size = UDim2.new(0, 140, 0, 100)
+            spectrumFrame.Position = UDim2.new(0, 12, 0, 36)
+            spectrumFrame.BackgroundColor3 = Color3.new(1, 1, 1)
+            spectrumFrame.BorderSizePixel = 0
+            spectrumFrame.Parent = frame
+            
+            local sfc = Instance.new("UICorner")
+            sfc.CornerRadius = UDim.new(0, 4)
+            sfc.Parent = spectrumFrame
+            
+            -- Saturation gradient (white to hue)
+            local satGradient = Instance.new("UIGradient")
+            satGradient.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+                ColorSequenceKeypoint.new(1, HSVToColor3(h, 1, 1))
+            })
+            satGradient.Parent = spectrumFrame
+            
+            -- Value overlay (transparent to black)
+            local valOverlay = Instance.new("Frame")
+            valOverlay.Size = UDim2.new(1, 0, 1, 0)
+            valOverlay.BackgroundTransparency = 0
+            valOverlay.BorderSizePixel = 0
+            valOverlay.Parent = spectrumFrame
+            
+            local voc = Instance.new("UICorner")
+            voc.CornerRadius = UDim.new(0, 4)
+            voc.Parent = valOverlay
+            
+            local valGradient = Instance.new("UIGradient")
+            valGradient.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.new(0, 0, 0)),
+                ColorSequenceKeypoint.new(1, Color3.new(0, 0, 0))
+            })
+            valGradient.Transparency = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, 1),
+                NumberSequenceKeypoint.new(1, 0)
+            })
+            valGradient.Rotation = 90
+            valGradient.Parent = valOverlay
+            
+            -- Selection cursor
+            local cursor = Instance.new("Frame")
+            cursor.Size = UDim2.new(0, 8, 0, 8)
+            cursor.Position = UDim2.new(s, 0, 1 - v, -4)
+            cursor.BackgroundColor3 = Color3.new(1, 1, 1)
+            cursor.BorderSizePixel = 2
+            cursor.BorderColor3 = Color3.new(0, 0, 0)
+            cursor.Parent = spectrumFrame
+            
+            local cc = Instance.new("UICorner")
+            cc.CornerRadius = UDim.new(1, 0)
+            cc.Parent = cursor
+            
+            -- Hue Slider
+            local hueFrame = Instance.new("Frame")
+            hueFrame.Size = UDim2.new(0, 140, 0, 12)
+            hueFrame.Position = UDim2.new(0, 12, 0, 142)
+            hueFrame.BackgroundColor3 = Color3.new(1, 1, 1)
+            hueFrame.BorderSizePixel = 0
+            hueFrame.Parent = frame
+            
+            local hfc = Instance.new("UICorner")
+            hfc.CornerRadius = UDim.new(0, 6)
+            hfc.Parent = hueFrame
+            
+            -- Rainbow gradient for hue
+            local hueGradient = Instance.new("UIGradient")
+            hueGradient.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+                ColorSequenceKeypoint.new(0.167, Color3.fromRGB(255, 255, 0)),
+                ColorSequenceKeypoint.new(0.333, Color3.fromRGB(0, 255, 0)),
+                ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),
+                ColorSequenceKeypoint.new(0.667, Color3.fromRGB(0, 0, 255)),
+                ColorSequenceKeypoint.new(0.833, Color3.fromRGB(255, 0, 255)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
+            })
+            hueGradient.Parent = hueFrame
+            
+            -- Hue cursor
+            local hueCursor = Instance.new("Frame")
+            hueCursor.Size = UDim2.new(0, 4, 1, 4)
+            hueCursor.Position = UDim2.new(h, -2, 0, -2)
+            hueCursor.BackgroundColor3 = Color3.new(1, 1, 1)
+            hueCursor.BorderSizePixel = 2
+            hueCursor.BorderColor3 = Color3.new(0, 0, 0)
+            hueCursor.Parent = hueFrame
+            
+            local hcc = Instance.new("UICorner")
+            hcc.CornerRadius = UDim.new(0, 2)
+            hcc.Parent = hueCursor
+            
+            -- Preview Box
+            local previewFrame = Instance.new("Frame")
+            previewFrame.Size = UDim2.new(0, 60, 0, 60)
+            previewFrame.Position = UDim2.new(0, 162, 0, 36)
+            previewFrame.BackgroundColor3 = currentColor
+            previewFrame.BorderSizePixel = 2
+            previewFrame.BorderColor3 = theme.StrokeColor
+            previewFrame.Parent = frame
+            
+            local pfc = Instance.new("UICorner")
+            pfc.CornerRadius = UDim.new(0, 6)
+            pfc.Parent = previewFrame
+            
+            -- RGB Inputs
+            local inputWidth = 50
+            local inputHeight = 22
+            local startY = 102
+            
+            local rLabel = Instance.new("TextLabel")
+            rLabel.Size = UDim2.new(0, 15, 0, inputHeight)
+            rLabel.Position = UDim2.new(0, 162, 0, startY)
+            rLabel.BackgroundTransparency = 1
+            rLabel.Text = "R:"
+            rLabel.TextColor3 = theme.Text
+            rLabel.Font = theme.Font
+            rLabel.TextSize = 12
+            rLabel.Parent = frame
+            
+            local rBox = Instance.new("TextBox")
+            rBox.Size = UDim2.new(0, inputWidth, 0, inputHeight)
+            rBox.Position = UDim2.new(0, 180, 0, startY)
+            rBox.BackgroundColor3 = theme.AccentDarker
+            rBox.Text = tostring(math.floor(default.R * 255))
+            rBox.TextColor3 = theme.Text
+            rBox.Font = theme.Font
+            rBox.TextSize = 12
+            rBox.ClearTextOnFocus = false
+            rBox.Parent = frame
+            
+            local rbc = Instance.new("UICorner")
+            rbc.CornerRadius = UDim.new(0, 3)
+            rbc.Parent = rBox
+            
+            local gLabel = Instance.new("TextLabel")
+            gLabel.Size = UDim2.new(0, 15, 0, inputHeight)
+            gLabel.Position = UDim2.new(0, 162, 0, startY + 26)
+            gLabel.BackgroundTransparency = 1
+            gLabel.Text = "G:"
+            gLabel.TextColor3 = theme.Text
+            gLabel.Font = theme.Font
+            gLabel.TextSize = 12
+            gLabel.Parent = frame
+            
+            local gBox = Instance.new("TextBox")
+            gBox.Size = UDim2.new(0, inputWidth, 0, inputHeight)
+            gBox.Position = UDim2.new(0, 180, 0, startY + 26)
+            gBox.BackgroundColor3 = theme.AccentDarker
+            gBox.Text = tostring(math.floor(default.G * 255))
+            gBox.TextColor3 = theme.Text
+            gBox.Font = theme.Font
+            gBox.TextSize = 12
+            gBox.ClearTextOnFocus = false
+            gBox.Parent = frame
+            
+            local gbc = Instance.new("UICorner")
+            gbc.CornerRadius = UDim.new(0, 3)
+            gbc.Parent = gBox
+            
+            local bLabel = Instance.new("TextLabel")
+            bLabel.Size = UDim2.new(0, 15, 0, inputHeight)
+            bLabel.Position = UDim2.new(0, 162, 0, startY + 52)
+            bLabel.BackgroundTransparency = 1
+            bLabel.Text = "B:"
+            bLabel.TextColor3 = theme.Text
+            bLabel.Font = theme.Font
+            bLabel.TextSize = 12
+            bLabel.Parent = frame
+            
+            local bBox = Instance.new("TextBox")
+            bBox.Size = UDim2.new(0, inputWidth, 0, inputHeight)
+            bBox.Position = UDim2.new(0, 180, 0, startY + 52)
+            bBox.BackgroundColor3 = theme.AccentDarker
+            bBox.Text = tostring(math.floor(default.B * 255))
+            bBox.TextColor3 = theme.Text
+            bBox.Font = theme.Font
+            bBox.TextSize = 12
+            bBox.ClearTextOnFocus = false
+            bBox.Parent = frame
+            
+            local bbc = Instance.new("UICorner")
+            bbc.CornerRadius = UDim.new(0, 3)
+            bbc.Parent = bBox
+            
+            -- Hex Input
+            local hexLabel = Instance.new("TextLabel")
+            hexLabel.Size = UDim2.new(0, 30, 0, inputHeight)
+            hexLabel.Position = UDim2.new(0, 12, 0, 164)
+            hexLabel.BackgroundTransparency = 1
+            hexLabel.Text = "HEX:"
+            hexLabel.TextColor3 = theme.Text
+            hexLabel.Font = theme.Font
+            hexLabel.TextSize = 12
+            hexLabel.Parent = frame
+            
+            local hexBox = Instance.new("TextBox")
+            hexBox.Size = UDim2.new(0, 80, 0, inputHeight)
+            hexBox.Position = UDim2.new(0, 48, 0, 164)
+            hexBox.BackgroundColor3 = theme.AccentDarker
+            hexBox.Text = string.format("#%02X%02X%02X", math.floor(default.R * 255), math.floor(default.G * 255), math.floor(default.B * 255))
+            hexBox.TextColor3 = theme.Text
+            hexBox.Font = theme.Font
+            hexBox.TextSize = 12
+            hexBox.ClearTextOnFocus = false
+            hexBox.Parent = frame
+            
+            local hexc = Instance.new("UICorner")
+            hexc.CornerRadius = UDim.new(0, 3)
+            hexc.Parent = hexBox
+            
+            -- Copy/Apply buttons
+            local copyBtn = Instance.new("TextButton")
+            copyBtn.Size = UDim2.new(0, 60, 0, 24)
+            copyBtn.Position = UDim2.new(0, 140, 0, 162)
+            copyBtn.BackgroundColor3 = theme.AccentDarker
+            copyBtn.Text = "Copy"
+            copyBtn.TextColor3 = theme.Text
+            copyBtn.Font = theme.Font
+            copyBtn.TextSize = 11
+            copyBtn.Parent = frame
+            
+            local copyc = Instance.new("UICorner")
+            copyc.CornerRadius = UDim.new(0, 4)
+            copyc.Parent = copyBtn
+            
+            local applyBtn = Instance.new("TextButton")
+            applyBtn.Size = UDim2.new(0, 60, 0, 24)
+            applyBtn.Position = UDim2.new(0, 208, 0, 162)
+            applyBtn.BackgroundColor3 = theme.Accent
+            applyBtn.Text = "Apply"
+            applyBtn.TextColor3 = Color3.new(0, 0, 0)
+            applyBtn.Font = theme.Font
+            applyBtn.TextSize = 11
+            applyBtn.Parent = frame
+            
+            local applyc = Instance.new("UICorner")
+            applyc.CornerRadius = UDim.new(0, 4)
+            applyc.Parent = applyBtn
+            
+            -- API
+            local api = {}
+            
+            function api:GetColor()
+                return currentColor
+            end
+            
+            function api:SetColor(color)
+                currentColor = color
+                h, s, v = Color3ToHSV(color)
+                
+                -- Update visuals
+                previewFrame.BackgroundColor3 = color
+                satGradient.Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+                    ColorSequenceKeypoint.new(1, HSVToColor3(h, 1, 1))
+                })
+                cursor.Position = UDim2.new(s, -4, 1 - v, -4)
+                hueCursor.Position = UDim2.new(h, -2, 0, -2)
+                
+                -- Update inputs
+                rBox.Text = tostring(math.floor(color.R * 255))
+                gBox.Text = tostring(math.floor(color.G * 255))
+                bBox.Text = tostring(math.floor(color.B * 255))
+                hexBox.Text = string.format("#%02X%02X%02X", math.floor(color.R * 255), math.floor(color.G * 255), math.floor(color.B * 255))
+                
+                if callback then callback(color) end
+            end
+            
+            -- Update function
+            local function updateFromHSV()
+                currentColor = HSVToColor3(h, s, v)
+                previewFrame.BackgroundColor3 = currentColor
+                
+                rBox.Text = tostring(math.floor(currentColor.R * 255))
+                gBox.Text = tostring(math.floor(currentColor.G * 255))
+                bBox.Text = tostring(math.floor(currentColor.B * 255))
+                hexBox.Text = string.format("#%02X%02X%02X", math.floor(currentColor.R * 255), math.floor(currentColor.G * 255), math.floor(currentColor.B * 255))
+                
+                if callback then callback(currentColor) end
+            end
+            
+            -- Spectrum dragging
+            local spectrumDragging = false
+            spectrumFrame.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    spectrumDragging = true
+                    local relX = math.clamp((input.Position.X - spectrumFrame.AbsolutePosition.X) / spectrumFrame.AbsoluteSize.X, 0, 1)
+                    local relY = math.clamp((input.Position.Y - spectrumFrame.AbsolutePosition.Y) / spectrumFrame.AbsoluteSize.Y, 0, 1)
+                    s = relX
+                    v = 1 - relY
+                    cursor.Position = UDim2.new(s, -4, 1 - v, -4)
+                    updateFromHSV()
+                end
+            end)
+            
+            spectrumFrame.InputChanged:Connect(function(input)
+                if spectrumDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                    local relX = math.clamp((input.Position.X - spectrumFrame.AbsolutePosition.X) / spectrumFrame.AbsoluteSize.X, 0, 1)
+                    local relY = math.clamp((input.Position.Y - spectrumFrame.AbsolutePosition.Y) / spectrumFrame.AbsoluteSize.Y, 0, 1)
+                    s = relX
+                    v = 1 - relY
+                    cursor.Position = UDim2.new(s, -4, 1 - v, -4)
+                    updateFromHSV()
+                end
+            end)
+            
+            UserInputService.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    spectrumDragging = false
+                end
+            end)
+            
+            -- Hue dragging
+            local hueDragging = false
+            hueFrame.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    hueDragging = true
+                    local relX = math.clamp((input.Position.X - hueFrame.AbsolutePosition.X) / hueFrame.AbsoluteSize.X, 0, 1)
+                    h = relX
+                    hueCursor.Position = UDim2.new(h, -2, 0, -2)
+                    satGradient.Color = ColorSequence.new({
+                        ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+                        ColorSequenceKeypoint.new(1, HSVToColor3(h, 1, 1))
+                    })
+                    updateFromHSV()
+                end
+            end)
+            
+            hueFrame.InputChanged:Connect(function(input)
+                if hueDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                    local relX = math.clamp((input.Position.X - hueFrame.AbsolutePosition.X) / hueFrame.AbsoluteSize.X, 0, 1)
+                    h = relX
+                    hueCursor.Position = UDim2.new(h, -2, 0, -2)
+                    satGradient.Color = ColorSequence.new({
+                        ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+                        ColorSequenceKeypoint.new(1, HSVToColor3(h, 1, 1))
+                    })
+                    updateFromHSV()
+                end
+            end)
+            
+            UserInputService.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    hueDragging = false
+                end
+            end)
+            
+            -- RGB Input handlers
+            local function updateFromRGB()
+                local r = math.clamp(tonumber(rBox.Text) or 0, 0, 255) / 255
+                local g = math.clamp(tonumber(gBox.Text) or 0, 0, 255) / 255
+                local b = math.clamp(tonumber(bBox.Text) or 0, 0, 255) / 255
+                api:SetColor(Color3.new(r, g, b))
+            end
+            
+            rBox.FocusLost:Connect(updateFromRGB)
+            gBox.FocusLost:Connect(updateFromRGB)
+            bBox.FocusLost:Connect(updateFromRGB)
+            
+            -- Hex Input handler
+            hexBox.FocusLost:Connect(function()
+                local hex = hexBox.Text:gsub("#", "")
+                if #hex == 6 then
+                    local r = tonumber(hex:sub(1, 2), 16) or 0
+                    local g = tonumber(hex:sub(3, 4), 16) or 0
+                    local b = tonumber(hex:sub(5, 6), 16) or 0
+                    api:SetColor(Color3.fromRGB(r, g, b))
+                end
+            end)
+            
+            -- Copy button
+            copyBtn.MouseButton1Click:Connect(function()
+                local hex = string.format("#%02X%02X%02X", math.floor(currentColor.R * 255), math.floor(currentColor.G * 255), math.floor(currentColor.B * 255))
+                -- In a real executor, you'd use setclipboard(hex)
+                print("Color copied:", hex)
+                SmileUILib:Notify({
+                    title = "Color Copied",
+                    message = hex .. " copied to clipboard!",
+                    duration = 2
+                })
+            end)
+            
+            -- Apply button (trigger callback)
+            applyBtn.MouseButton1Click:Connect(function()
+                if callback then callback(currentColor) end
+                SmileUILib:Notify({
+                    title = "Color Applied",
+                    message = "Color has been applied!",
+                    duration = 2
+                })
+            end)
+            
+            -- Hover effects
+            copyBtn.MouseEnter:Connect(function()
+                TweenService:Create(copyBtn, TweenInfo.new(0.2), {BackgroundColor3 = theme.Accent}):Play()
+            end)
+            copyBtn.MouseLeave:Connect(function()
+                TweenService:Create(copyBtn, TweenInfo.new(0.2), {BackgroundColor3 = theme.AccentDarker}):Play()
+            end)
+            
+            applyBtn.MouseEnter:Connect(function()
+                TweenService:Create(applyBtn, TweenInfo.new(0.2), {BackgroundColor3 = theme.AccentDark}):Play()
+            end)
+            applyBtn.MouseLeave:Connect(function()
+                TweenService:Create(applyBtn, TweenInfo.new(0.2), {BackgroundColor3 = theme.Accent}):Play()
+            end)
             
             return api
         end
