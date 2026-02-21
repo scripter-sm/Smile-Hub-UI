@@ -7,7 +7,7 @@
 /_______  /__|_|  /__|____/\___  >  \___|_  /|____/|___  / 
         \/      \/             \/         \/           \/  
 
- ]]
+]]
 
 local SmileUILib = {}
 local TweenService = game:GetService("TweenService")
@@ -148,14 +148,12 @@ function SmileUILib:CreateWindow(options)
     local iconText = options.iconText or "$"
     local tabsWidth = options.tabsWidth or 152
     local contentOffset = options.contentOffset or 176
-    local autoConfig = options.autoConfig or false
-    local baseFolder = "Smile Hub GUI"
-    local scriptFolder = baseFolder .. "/" .. title
-    if not isfolder(baseFolder) then
-        makefolder(baseFolder)
+    local folderPath = "Smile Hub GUI/" .. title .. "/"
+    if not isfolder("Smile Hub GUI") then
+        makefolder("Smile Hub GUI")
     end
-    if not isfolder(scriptFolder) then
-        makefolder(scriptFolder)
+    if not isfolder(folderPath) then
+        makefolder(folderPath)
     end
     local screen = Instance.new("ScreenGui")
     screen.Name = "SmileUI_" .. math.floor(tick() * 1000)
@@ -273,9 +271,8 @@ function SmileUILib:CreateWindow(options)
     end)
     local window = {}
     window.Elements = {}
-    window.title = title
-    window.scriptFolder = scriptFolder
-    window.autoConfig = autoConfig
+    window.autoSave = false
+    window.folderPath = folderPath
     local activePage = nil
     function window:AddTab(tabOptions)
         local tabName = tabOptions.name or "Tab"
@@ -344,6 +341,7 @@ function SmileUILib:CreateWindow(options)
             activePage = page
         end
         local tabAPI = {}
+        tabAPI.page = page -- Expose page for custom additions
         function tabAPI:AddSection(secOptions)
             local title = secOptions.title or "Section"
             local textSize = secOptions.textSize or 16
@@ -464,7 +462,7 @@ function SmileUILib:CreateWindow(options)
                     BackgroundColor3 = state and theme.Accent or theme.AccentDarker
                 }):Play()
                 if callback then callback(state) end
-                if window.autoConfig then
+                if window.autoSave then
                     window:SaveConfig("AutomaticConfig")
                 end
             end
@@ -533,7 +531,7 @@ function SmileUILib:CreateWindow(options)
                 fill.Size = UDim2.new((value - min) / (max - min), 0, 1, 0)
                 lbl.Text = name .. ": " .. value
                 if callback then callback(value) end
-                if window.autoConfig then
+                if window.autoSave then
                     window:SaveConfig("AutomaticConfig")
                 end
             end
@@ -627,7 +625,7 @@ function SmileUILib:CreateWindow(options)
                         selection = choice
                         selected.Text = choice
                         if callback then callback(selection) end
-                        if window.autoConfig then
+                        if window.autoSave then
                             window:SaveConfig("AutomaticConfig")
                         end
                         return
@@ -639,7 +637,7 @@ function SmileUILib:CreateWindow(options)
                 selection = options[current]
                 selected.Text = selection
                 if callback then callback(selection) end
-                if window.autoConfig then
+                if window.autoSave then
                     window:SaveConfig("AutomaticConfig")
                 end
             end)
@@ -697,7 +695,7 @@ function SmileUILib:CreateWindow(options)
                 currentKey = key
                 btn.Text = currentKey.Name
                 if callback then callback(currentKey) end
-                if window.autoConfig then
+                if window.autoSave then
                     window:SaveConfig("AutomaticConfig")
                 end
             end
@@ -772,7 +770,7 @@ function SmileUILib:CreateWindow(options)
                 text = newText
                 textbox.Text = newText
                 if callback then callback(text) end
-                if window.autoConfig then
+                if window.autoSave then
                     window:SaveConfig("AutomaticConfig")
                 end
             end
@@ -847,7 +845,7 @@ function SmileUILib:CreateWindow(options)
                     Size = UDim2.new(newValue / max, 0, 1, 0)
                 }):Play()
                 lbl.Text = name .. ": " .. math.floor((newValue / max) * 100) .. "%"
-                if window.autoConfig then
+                if window.autoSave then
                     window:SaveConfig("AutomaticConfig")
                 end
             end
@@ -863,40 +861,62 @@ function SmileUILib:CreateWindow(options)
         for key, el in pairs(self.Elements) do
             if el.type == "toggle" then
                 cfg[key] = el.api:GetState()
-            elseif el.type == "slider" or el.type == "progress" then
+            elseif el.type == "slider" then
                 cfg[key] = el.api:GetValue()
-            elseif el.type == "dropdown" or el.type == "textbox" then
-                cfg[key] = el.api:GetSelection and el.api:GetSelection() or el.api:GetText()
+            elseif el.type == "dropdown" then
+                cfg[key] = el.api:GetSelection()
             elseif el.type == "keybind" then
-                local currentKey = el.api:GetKey()
-                cfg[key] = {EnumType = currentKey.EnumType.Name, Name = currentKey.Name}
+                cfg[key] = {EnumType = el.api:GetKey().EnumType.Name, Name = el.api:GetKey().Name}
+            elseif el.type == "textbox" then
+                cfg[key] = el.api:GetText()
+            elseif el.type == "progress" then
+                cfg[key] = el.api:GetValue()
             end
         end
         local json = HttpService:JSONEncode(cfg)
-        writefile(self.scriptFolder .. "/" .. name .. ".json", json)
+        writefile(self.folderPath .. name .. ".json", json)
     end
     function window:LoadConfig(name)
-        local filePath = self.scriptFolder .. "/" .. name .. ".json"
-        if not isfile(filePath) then return end
-        local json = readfile(filePath)
+        local file = self.folderPath .. name .. ".json"
+        if not isfile(file) then return end
+        local json = readfile(file)
         local cfg = HttpService:JSONDecode(json)
         for key, val in pairs(cfg) do
             local el = self.Elements[key]
             if el then
                 if el.type == "toggle" then
                     el.api:SetState(val)
-                elseif el.type == "slider" or el.type == "progress" then
+                elseif el.type == "slider" then
                     el.api:SetValue(val)
                 elseif el.type == "dropdown" then
                     el.api:SetSelection(val)
-                elseif el.type == "textbox" then
-                    el.api:SetText(val)
                 elseif el.type == "keybind" then
                     local enum = Enum[val.EnumType][val.Name]
                     el.api:SetKey(enum)
+                elseif el.type == "textbox" then
+                    el.api:SetText(val)
+                elseif el.type == "progress" then
+                    el.api:SetValue(val)
                 end
             end
         end
+    end
+    function window:GetConfigs()
+        local configs = {}
+        if listfiles then
+            for _, file in ipairs(listfiles(self.folderPath)) do
+                local filename = file:match("[^/]+$") -- Get filename from path
+                if filename:match("%.json$") then
+                    table.insert(configs, filename:match("(.+)%.json$"))
+                end
+            end
+        end
+        table.sort(configs)
+        return configs
+    end
+    function window:EnableAutoConfig()
+        self:LoadConfig("AutomaticConfig")
+        self.autoSave = true
     end
     main.Size = UDim2.new(0, 0, 0, 0)
     main.BackgroundTransparency = 1
@@ -904,9 +924,6 @@ function SmileUILib:CreateWindow(options)
         Size = UDim2.new(0, width, 0, height),
         BackgroundTransparency = 0
     }):Play()
-    if autoConfig then
-        window:LoadConfig("AutomaticConfig")
-    end
     return window
 end
 return SmileUILib
