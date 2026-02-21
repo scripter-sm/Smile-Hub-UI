@@ -41,7 +41,6 @@ SmileUILib.Theme = {
     DropdownHeight = 40,
     KeybindHeight = 38,
     TextboxHeight = 40,
-    ColorPickerHeight = 280,
     SpacerDefaultHeight = 8,
     AnimationSpeed = 0.18,
     NotificationInSpeed = 0.58,
@@ -49,11 +48,9 @@ SmileUILib.Theme = {
     WindowOpenSpeed = 0.7
 }
 
--- Store all windows for theme updating
 SmileUILib.Windows = {}
 SmileUILib.ThemeableElements = {}
 
--- Helper function to register themeable elements
 local function RegisterElement(windowId, element, property, themeKey)
     if not SmileUILib.ThemeableElements[windowId] then
         SmileUILib.ThemeableElements[windowId] = {}
@@ -65,7 +62,6 @@ local function RegisterElement(windowId, element, property, themeKey)
     })
 end
 
--- Function to update theme for all windows
 function SmileUILib:SetTheme(newTheme)
     for key, value in pairs(newTheme) do
         self.Theme[key] = value
@@ -83,7 +79,6 @@ function SmileUILib:SetTheme(newTheme)
     end
 end
 
--- Color utility functions
 local function Color3ToHSV(color)
     local r, g, b = color.R, color.G, color.B
     local max = math.max(r, g, b)
@@ -94,7 +89,6 @@ local function Color3ToHSV(color)
     
     if delta ~= 0 then
         s = delta / max
-        
         if max == r then
             h = (g - b) / delta + (g < b and 6 or 0)
         elseif max == g then
@@ -110,7 +104,6 @@ end
 
 local function HSVToColor3(h, s, v)
     local r, g, b
-    
     local i = math.floor(h * 6)
     local f = h * 6 - i
     local p = v * (1 - s)
@@ -1104,18 +1097,15 @@ function SmileUILib:CreateWindow(options)
             return api
         end
         
-        -- MODERN COLOR PICKER
+        -- MODAL COLOR PICKER - Opens when clicking a button
         function tabAPI:AddColorPicker(cpOptions)
             local name = cpOptions.name or "Color Picker"
             local default = cpOptions.default or Color3.fromRGB(0, 255, 0)
             local callback = cpOptions.callback
-            local height = cpOptions.height or theme.ColorPickerHeight
             
-            local h, s, v = Color3ToHSV(default)
-            local currentColor = default
-            
+            -- Main container frame (compact button view)
             local frame = Instance.new("Frame")
-            frame.Size = UDim2.new(1, -8, 0, height)
+            frame.Size = UDim2.new(1, -8, 0, 40)
             frame.BackgroundColor3 = theme.AccentVeryDark
             frame.Parent = page
             
@@ -1125,264 +1115,453 @@ function SmileUILib:CreateWindow(options)
             c.CornerRadius = theme.ElementCornerRadius
             c.Parent = frame
             
-            -- Title
+            -- Label
             local lbl = Instance.new("TextLabel")
-            lbl.Size = UDim2.new(1, -20, 0, 24)
-            lbl.Position = UDim2.new(0, 12, 0, 8)
+            lbl.Size = UDim2.new(0.6, 0, 1, 0)
+            lbl.Position = UDim2.new(0, 14, 0, 0)
             lbl.BackgroundTransparency = 1
             lbl.Text = name
             lbl.TextColor3 = theme.Text
             lbl.Font = theme.Font
             lbl.TextSize = 14
             lbl.TextXAlignment = Enum.TextXAlignment.Left
+            lbl.TextTruncate = Enum.TextTruncate.AtEnd
             lbl.Parent = frame
             
             RegisterElement(windowId, lbl, "TextColor3", "Text")
             
-            -- Color Spectrum (Saturation/Value box)
-            local spectrumFrame = Instance.new("Frame")
-            spectrumFrame.Size = UDim2.new(0, 140, 0, 100)
-            spectrumFrame.Position = UDim2.new(0, 12, 0, 36)
-            spectrumFrame.BackgroundColor3 = Color3.new(1, 1, 1)
-            spectrumFrame.BorderSizePixel = 0
-            spectrumFrame.Parent = frame
+            -- Current color preview box
+            local previewBox = Instance.new("Frame")
+            previewBox.Size = UDim2.new(0, 32, 0, 32)
+            previewBox.Position = UDim2.new(1, -90, 0.5, -16)
+            previewBox.BackgroundColor3 = default
+            previewBox.BorderSizePixel = 2
+            previewBox.BorderColor3 = theme.StrokeColor
+            previewBox.Parent = frame
             
-            local sfc = Instance.new("UICorner")
-            sfc.CornerRadius = UDim.new(0, 4)
-            sfc.Parent = spectrumFrame
+            local pbc = Instance.new("UICorner")
+            pbc.CornerRadius = UDim.new(0, 4)
+            pbc.Parent = previewBox
             
-            -- Saturation gradient (white to hue)
-            local satGradient = Instance.new("UIGradient")
-            satGradient.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
-                ColorSequenceKeypoint.new(1, HSVToColor3(h, 1, 1))
-            })
-            satGradient.Parent = spectrumFrame
+            -- Open button
+            local openBtn = Instance.new("TextButton")
+            openBtn.Size = UDim2.new(0, 70, 0, 28)
+            openBtn.Position = UDim2.new(1, -80, 0.5, -14)
+            openBtn.BackgroundColor3 = theme.AccentDarker
+            openBtn.Text = "Pick"
+            openBtn.TextColor3 = theme.Text
+            openBtn.Font = theme.Font
+            openBtn.TextSize = 13
+            openBtn.Parent = frame
             
-            -- Value overlay (transparent to black)
-            local valOverlay = Instance.new("Frame")
-            valOverlay.Size = UDim2.new(1, 0, 1, 0)
-            valOverlay.BackgroundTransparency = 0
-            valOverlay.BorderSizePixel = 0
-            valOverlay.Parent = spectrumFrame
+            RegisterElement(windowId, openBtn, "BackgroundColor3", "AccentDarker")
+            RegisterElement(windowId, openBtn, "TextColor3", "Text")
             
-            local voc = Instance.new("UICorner")
-            voc.CornerRadius = UDim.new(0, 4)
-            voc.Parent = valOverlay
+            local obc = Instance.new("UICorner")
+            obc.CornerRadius = UDim.new(0, 4)
+            obc.Parent = openBtn
             
-            local valGradient = Instance.new("UIGradient")
-            valGradient.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.new(0, 0, 0)),
-                ColorSequenceKeypoint.new(1, Color3.new(0, 0, 0))
-            })
-            valGradient.Transparency = NumberSequence.new({
-                NumberSequenceKeypoint.new(0, 1),
-                NumberSequenceKeypoint.new(1, 0)
-            })
-            valGradient.Rotation = 90
-            valGradient.Parent = valOverlay
+            -- Hover effects for open button
+            openBtn.MouseEnter:Connect(function()
+                TweenService:Create(openBtn, TweenInfo.new(0.2), {
+                    BackgroundColor3 = theme.Accent
+                }):Play()
+            end)
             
-            -- Selection cursor
-            local cursor = Instance.new("Frame")
-            cursor.Size = UDim2.new(0, 8, 0, 8)
-            cursor.Position = UDim2.new(s, 0, 1 - v, -4)
-            cursor.BackgroundColor3 = Color3.new(1, 1, 1)
-            cursor.BorderSizePixel = 2
-            cursor.BorderColor3 = Color3.new(0, 0, 0)
-            cursor.Parent = spectrumFrame
+            openBtn.MouseLeave:Connect(function()
+                TweenService:Create(openBtn, TweenInfo.new(0.2), {
+                    BackgroundColor3 = theme.AccentDarker
+                }):Play()
+            end)
             
-            local cc = Instance.new("UICorner")
-            cc.CornerRadius = UDim.new(1, 0)
-            cc.Parent = cursor
+            -- Modal Color Picker Window
+            local modalOpen = false
+            local modalFrame = nil
             
-            -- Hue Slider
-            local hueFrame = Instance.new("Frame")
-            hueFrame.Size = UDim2.new(0, 140, 0, 12)
-            hueFrame.Position = UDim2.new(0, 12, 0, 142)
-            hueFrame.BackgroundColor3 = Color3.new(1, 1, 1)
-            hueFrame.BorderSizePixel = 0
-            hueFrame.Parent = frame
+            local function closeModal()
+                if modalFrame then
+                    TweenService:Create(modalFrame, TweenInfo.new(0.2), {
+                        Size = UDim2.new(0, 280, 0, 0),
+                        BackgroundTransparency = 1
+                    }):Play()
+                    task.wait(0.2)
+                    if modalFrame then
+                        modalFrame:Destroy()
+                        modalFrame = nil
+                    end
+                    modalOpen = false
+                end
+            end
             
-            local hfc = Instance.new("UICorner")
-            hfc.CornerRadius = UDim.new(0, 6)
-            hfc.Parent = hueFrame
+            local function openModal()
+                if modalOpen then
+                    closeModal()
+                    return
+                end
+                
+                modalOpen = true
+                
+                -- Create modal background overlay
+                local overlay = Instance.new("Frame")
+                overlay.Name = "ColorPickerModal"
+                overlay.Size = UDim2.new(0, 280, 0, 320)
+                overlay.Position = UDim2.new(0, frame.AbsolutePosition.X + frame.AbsoluteSize.X - 280, 0, frame.AbsolutePosition.Y + 45)
+                overlay.BackgroundColor3 = theme.Background
+                overlay.BorderSizePixel = 0
+                overlay.ZIndex = 100
+                overlay.Parent = screen
+                
+                modalFrame = overlay
+                
+                local oc = Instance.new("UICorner")
+                oc.CornerRadius = UDim.new(0, 8)
+                oc.Parent = overlay
+                
+                local os = Instance.new("UIStroke")
+                os.Color = theme.StrokeColor
+                os.Thickness = 2
+                os.Parent = overlay
+                
+                -- Header
+                local mHeader = Instance.new("Frame")
+                mHeader.Size = UDim2.new(1, 0, 0, 32)
+                mHeader.BackgroundColor3 = theme.Header
+                mHeader.BorderSizePixel = 0
+                mHeader.ZIndex = 101
+                mHeader.Parent = overlay
+                
+                local mhc = Instance.new("UICorner")
+                mhc.CornerRadius = UDim.new(0, 6)
+                mhc.Parent = mHeader
+                
+                local mTitle = Instance.new("TextLabel")
+                mTitle.Size = UDim2.new(1, -40, 1, 0)
+                mTitle.Position = UDim2.new(0, 12, 0, 0)
+                mTitle.BackgroundTransparency = 1
+                mTitle.Text = "Pick a Color"
+                mTitle.TextColor3 = theme.Text
+                mTitle.Font = theme.Font
+                mTitle.TextSize = 16
+                mTitle.TextXAlignment = Enum.TextXAlignment.Left
+                mTitle.ZIndex = 102
+                mTitle.Parent = mHeader
+                
+                -- Close button
+                local closeBtn = Instance.new("TextButton")
+                closeBtn.Size = UDim2.new(0, 28, 0, 28)
+                closeBtn.Position = UDim2.new(1, -32, 0, 2)
+                closeBtn.BackgroundTransparency = 1
+                closeBtn.Text = "×"
+                closeBtn.TextColor3 = theme.Text
+                closeBtn.Font = theme.Font
+                closeBtn.TextSize = 24
+                closeBtn.ZIndex = 102
+                closeBtn.Parent = mHeader
+                
+                closeBtn.MouseButton1Click:Connect(closeModal)
+                
+                -- Color Spectrum (Saturation/Value box)
+                local h, s, v = Color3ToHSV(default)
+                local currentColor = default
+                
+                local spectrumFrame = Instance.new("Frame")
+                spectrumFrame.Size = UDim2.new(0, 200, 0, 140)
+                spectrumFrame.Position = UDim2.new(0, 12, 0, 44)
+                spectrumFrame.BackgroundColor3 = Color3.new(1, 1, 1)
+                spectrumFrame.BorderSizePixel = 0
+                spectrumFrame.ZIndex = 101
+                spectrumFrame.Parent = overlay
+                
+                local sfc = Instance.new("UICorner")
+                sfc.CornerRadius = UDim.new(0, 4)
+                sfc.Parent = spectrumFrame
+                
+                -- Saturation gradient
+                local satGradient = Instance.new("UIGradient")
+                satGradient.Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+                    ColorSequenceKeypoint.new(1, HSVToColor3(h, 1, 1))
+                })
+                satGradient.Parent = spectrumFrame
+                
+                -- Value overlay
+                local valOverlay = Instance.new("Frame")
+                valOverlay.Size = UDim2.new(1, 0, 1, 0)
+                valOverlay.BackgroundTransparency = 0
+                valOverlay.BorderSizePixel = 0
+                valOverlay.ZIndex = 102
+                valOverlay.Parent = spectrumFrame
+                
+                local voc = Instance.new("UICorner")
+                voc.CornerRadius = UDim.new(0, 4)
+                voc.Parent = valOverlay
+                
+                local valGradient = Instance.new("UIGradient")
+                valGradient.Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Color3.new(0, 0, 0)),
+                    ColorSequenceKeypoint.new(1, Color3.new(0, 0, 0))
+                })
+                valGradient.Transparency = NumberSequence.new({
+                    NumberSequenceKeypoint.new(0, 1),
+                    NumberSequenceKeypoint.new(1, 0)
+                })
+                valGradient.Rotation = 90
+                valGradient.Parent = valOverlay
+                
+                -- Selection cursor
+                local cursor = Instance.new("Frame")
+                cursor.Size = UDim2.new(0, 10, 0, 10)
+                cursor.Position = UDim2.new(s, -5, 1 - v, -5)
+                cursor.BackgroundColor3 = Color3.new(1, 1, 1)
+                cursor.BorderSizePixel = 2
+                cursor.BorderColor3 = Color3.new(0, 0, 0)
+                cursor.ZIndex = 103
+                cursor.Parent = spectrumFrame
+                
+                local cc = Instance.new("UICorner")
+                cc.CornerRadius = UDim.new(1, 0)
+                cc.Parent = cursor
+                
+                -- Hue Slider
+                local hueFrame = Instance.new("Frame")
+                hueFrame.Size = UDim2.new(0, 200, 0, 16)
+                hueFrame.Position = UDim2.new(0, 12, 0, 190)
+                hueFrame.BackgroundColor3 = Color3.new(1, 1, 1)
+                hueFrame.BorderSizePixel = 0
+                hueFrame.ZIndex = 101
+                hueFrame.Parent = overlay
+                
+                local hfc = Instance.new("UICorner")
+                hfc.CornerRadius = UDim.new(0, 8)
+                hfc.Parent = hueFrame
+                
+                local hueGradient = Instance.new("UIGradient")
+                hueGradient.Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+                    ColorSequenceKeypoint.new(0.167, Color3.fromRGB(255, 255, 0)),
+                    ColorSequenceKeypoint.new(0.333, Color3.fromRGB(0, 255, 0)),
+                    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),
+                    ColorSequenceKeypoint.new(0.667, Color3.fromRGB(0, 0, 255)),
+                    ColorSequenceKeypoint.new(0.833, Color3.fromRGB(255, 0, 255)),
+                    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
+                })
+                hueGradient.Parent = hueFrame
+                
+                -- Hue cursor
+                local hueCursor = Instance.new("Frame")
+                hueCursor.Size = UDim2.new(0, 6, 1, 4)
+                hueCursor.Position = UDim2.new(h, -3, 0, -2)
+                hueCursor.BackgroundColor3 = Color3.new(1, 1, 1)
+                hueCursor.BorderSizePixel = 2
+                hueCursor.BorderColor3 = Color3.new(0, 0, 0)
+                hueCursor.ZIndex = 102
+                hueCursor.Parent = hueFrame
+                
+                local hcc = Instance.new("UICorner")
+                hcc.CornerRadius = UDim.new(0, 3)
+                hcc.Parent = hueCursor
+                
+                -- Preview and RGB section
+                local previewSection = Instance.new("Frame")
+                previewSection.Size = UDim2.new(0, 50, 0, 140)
+                previewSection.Position = UDim2.new(0, 220, 0, 44)
+                previewSection.BackgroundTransparency = 1
+                previewSection.ZIndex = 101
+                previewSection.Parent = overlay
+                
+                -- Large preview
+                local bigPreview = Instance.new("Frame")
+                bigPreview.Size = UDim2.new(1, 0, 0, 50)
+                bigPreview.BackgroundColor3 = currentColor
+                bigPreview.BorderSizePixel = 2
+                bigPreview.BorderColor3 = theme.StrokeColor
+                bigPreview.ZIndex = 101
+                bigPreview.Parent = previewSection
+                
+                local bpc = Instance.new("UICorner")
+                bpc.CornerRadius = UDim.new(0, 6)
+                bpc.Parent = bigPreview
+                
+                -- RGB Labels
+                local rLabel = Instance.new("TextLabel")
+                rLabel.Size = UDim2.new(1, 0, 0, 18)
+                rLabel.Position = UDim2.new(0, 0, 0, 58)
+                rLabel.BackgroundTransparency = 1
+                rLabel.Text = "R: 0"
+                rLabel.TextColor3 = theme.Text
+                rLabel.Font = theme.Font
+                rLabel.TextSize = 11
+                rLabel.TextXAlignment = Enum.TextXAlignment.Left
+                rLabel.ZIndex = 101
+                rLabel.Parent = previewSection
+                
+                local gLabel = Instance.new("TextLabel")
+                gLabel.Size = UDim2.new(1, 0, 0, 18)
+                gLabel.Position = UDim2.new(0, 0, 0, 76)
+                gLabel.BackgroundTransparency = 1
+                gLabel.Text = "G: 255"
+                gLabel.TextColor3 = theme.Text
+                gLabel.Font = theme.Font
+                gLabel.TextSize = 11
+                gLabel.TextXAlignment = Enum.TextXAlignment.Left
+                gLabel.ZIndex = 101
+                gLabel.Parent = previewSection
+                
+                local bLabel = Instance.new("TextLabel")
+                bLabel.Size = UDim2.new(1, 0, 0, 18)
+                bLabel.Position = UDim2.new(0, 0, 0, 94)
+                bLabel.BackgroundTransparency = 1
+                bLabel.Text = "B: 0"
+                bLabel.TextColor3 = theme.Text
+                bLabel.Font = theme.Font
+                bLabel.TextSize = 11
+                bLabel.TextXAlignment = Enum.TextXAlignment.Left
+                bLabel.ZIndex = 101
+                bLabel.Parent = previewSection
+                
+                -- Hex display
+                local hexLabel = Instance.new("TextLabel")
+                hexLabel.Size = UDim2.new(1, 0, 0, 20)
+                hexLabel.Position = UDim2.new(0, 0, 0, 118)
+                hexLabel.BackgroundTransparency = 1
+                hexLabel.Text = "#00FF00"
+                hexLabel.TextColor3 = theme.TextDim
+                hexLabel.Font = theme.Font
+                hexLabel.TextSize = 10
+                hexLabel.TextXAlignment = Enum.TextXAlignment.Center
+                hexLabel.ZIndex = 101
+                hexLabel.Parent = previewSection
+                
+                -- Confirm button
+                local confirmBtn = Instance.new("TextButton")
+                confirmBtn.Size = UDim2.new(0, 120, 0, 32)
+                confirmBtn.Position = UDim2.new(0.5, -60, 0, 270)
+                confirmBtn.BackgroundColor3 = theme.Accent
+                confirmBtn.Text = "Apply Color"
+                confirmBtn.TextColor3 = Color3.new(0, 0, 0)
+                confirmBtn.Font = theme.Font
+                confirmBtn.TextSize = 14
+                confirmBtn.ZIndex = 101
+                confirmBtn.Parent = overlay
+                
+                local cbc = Instance.new("UICorner")
+                cbc.CornerRadius = UDim.new(0, 6)
+                cbc.Parent = confirmBtn
+                
+                -- Update function
+                local function updateColor()
+                    currentColor = HSVToColor3(h, s, v)
+                    bigPreview.BackgroundColor3 = currentColor
+                    previewBox.BackgroundColor3 = currentColor
+                    
+                    local r = math.floor(currentColor.R * 255)
+                    local g = math.floor(currentColor.G * 255)
+                    local b = math.floor(currentColor.B * 255)
+                    
+                    rLabel.Text = "R: " .. r
+                    gLabel.Text = "G: " .. g
+                    bLabel.Text = "B: " .. b
+                    hexLabel.Text = string.format("#%02X%02X%02X", r, g, b)
+                end
+                
+                -- Spectrum dragging
+                local spectrumDragging = false
+                spectrumFrame.InputBegan:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                        spectrumDragging = true
+                        local relX = math.clamp((input.Position.X - spectrumFrame.AbsolutePosition.X) / spectrumFrame.AbsoluteSize.X, 0, 1)
+                        local relY = math.clamp((input.Position.Y - spectrumFrame.AbsolutePosition.Y) / spectrumFrame.AbsoluteSize.Y, 0, 1)
+                        s = relX
+                        v = 1 - relY
+                        cursor.Position = UDim2.new(s, -5, 1 - v, -5)
+                        updateColor()
+                    end
+                end)
+                
+                spectrumFrame.InputChanged:Connect(function(input)
+                    if spectrumDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                        local relX = math.clamp((input.Position.X - spectrumFrame.AbsolutePosition.X) / spectrumFrame.AbsoluteSize.X, 0, 1)
+                        local relY = math.clamp((input.Position.Y - spectrumFrame.AbsolutePosition.Y) / spectrumFrame.AbsoluteSize.Y, 0, 1)
+                        s = relX
+                        v = 1 - relY
+                        cursor.Position = UDim2.new(s, -5, 1 - v, -5)
+                        updateColor()
+                    end
+                end)
+                
+                -- Hue dragging
+                local hueDragging = false
+                hueFrame.InputBegan:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                        hueDragging = true
+                        local relX = math.clamp((input.Position.X - hueFrame.AbsolutePosition.X) / hueFrame.AbsoluteSize.X, 0, 1)
+                        h = relX
+                        hueCursor.Position = UDim2.new(h, -3, 0, -2)
+                        satGradient.Color = ColorSequence.new({
+                            ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+                            ColorSequenceKeypoint.new(1, HSVToColor3(h, 1, 1))
+                        })
+                        updateColor()
+                    end
+                end)
+                
+                hueFrame.InputChanged:Connect(function(input)
+                    if hueDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                        local relX = math.clamp((input.Position.X - hueFrame.AbsolutePosition.X) / hueFrame.AbsoluteSize.X, 0, 1)
+                        h = relX
+                        hueCursor.Position = UDim2.new(h, -3, 0, -2)
+                        satGradient.Color = ColorSequence.new({
+                            ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+                            ColorSequenceKeypoint.new(1, HSVToColor3(h, 1, 1))
+                        })
+                        updateColor()
+                    end
+                end)
+                
+                UserInputService.InputEnded:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                        spectrumDragging = false
+                        hueDragging = false
+                    end
+                end)
+                
+                -- Confirm button
+                confirmBtn.MouseButton1Click:Connect(function()
+                    if callback then callback(currentColor) end
+                    closeModal()
+                    SmileUILib:Notify({
+                        title = "Color Applied",
+                        message = "New color has been set!",
+                        duration = 2
+                    })
+                end)
+                
+                confirmBtn.MouseEnter:Connect(function()
+                    TweenService:Create(confirmBtn, TweenInfo.new(0.2), {
+                        BackgroundColor3 = theme.AccentDark
+                    }):Play()
+                end)
+                
+                confirmBtn.MouseLeave:Connect(function()
+                    TweenService:Create(confirmBtn, TweenInfo.new(0.2), {
+                        BackgroundColor3 = theme.Accent
+                    }):Play()
+                end)
+                
+                -- Animation in
+                overlay.Size = UDim2.new(0, 280, 0, 0)
+                overlay.BackgroundTransparency = 1
+                TweenService:Create(overlay, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                    Size = UDim2.new(0, 280, 0, 320),
+                    BackgroundTransparency = 0
+                }):Play()
+            end
             
-            -- Rainbow gradient for hue
-            local hueGradient = Instance.new("UIGradient")
-            hueGradient.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
-                ColorSequenceKeypoint.new(0.167, Color3.fromRGB(255, 255, 0)),
-                ColorSequenceKeypoint.new(0.333, Color3.fromRGB(0, 255, 0)),
-                ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),
-                ColorSequenceKeypoint.new(0.667, Color3.fromRGB(0, 0, 255)),
-                ColorSequenceKeypoint.new(0.833, Color3.fromRGB(255, 0, 255)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
-            })
-            hueGradient.Parent = hueFrame
-            
-            -- Hue cursor
-            local hueCursor = Instance.new("Frame")
-            hueCursor.Size = UDim2.new(0, 4, 1, 4)
-            hueCursor.Position = UDim2.new(h, -2, 0, -2)
-            hueCursor.BackgroundColor3 = Color3.new(1, 1, 1)
-            hueCursor.BorderSizePixel = 2
-            hueCursor.BorderColor3 = Color3.new(0, 0, 0)
-            hueCursor.Parent = hueFrame
-            
-            local hcc = Instance.new("UICorner")
-            hcc.CornerRadius = UDim.new(0, 2)
-            hcc.Parent = hueCursor
-            
-            -- Preview Box
-            local previewFrame = Instance.new("Frame")
-            previewFrame.Size = UDim2.new(0, 60, 0, 60)
-            previewFrame.Position = UDim2.new(0, 162, 0, 36)
-            previewFrame.BackgroundColor3 = currentColor
-            previewFrame.BorderSizePixel = 2
-            previewFrame.BorderColor3 = theme.StrokeColor
-            previewFrame.Parent = frame
-            
-            local pfc = Instance.new("UICorner")
-            pfc.CornerRadius = UDim.new(0, 6)
-            pfc.Parent = previewFrame
-            
-            -- RGB Inputs
-            local inputWidth = 50
-            local inputHeight = 22
-            local startY = 102
-            
-            local rLabel = Instance.new("TextLabel")
-            rLabel.Size = UDim2.new(0, 15, 0, inputHeight)
-            rLabel.Position = UDim2.new(0, 162, 0, startY)
-            rLabel.BackgroundTransparency = 1
-            rLabel.Text = "R:"
-            rLabel.TextColor3 = theme.Text
-            rLabel.Font = theme.Font
-            rLabel.TextSize = 12
-            rLabel.Parent = frame
-            
-            local rBox = Instance.new("TextBox")
-            rBox.Size = UDim2.new(0, inputWidth, 0, inputHeight)
-            rBox.Position = UDim2.new(0, 180, 0, startY)
-            rBox.BackgroundColor3 = theme.AccentDarker
-            rBox.Text = tostring(math.floor(default.R * 255))
-            rBox.TextColor3 = theme.Text
-            rBox.Font = theme.Font
-            rBox.TextSize = 12
-            rBox.ClearTextOnFocus = false
-            rBox.Parent = frame
-            
-            local rbc = Instance.new("UICorner")
-            rbc.CornerRadius = UDim.new(0, 3)
-            rbc.Parent = rBox
-            
-            local gLabel = Instance.new("TextLabel")
-            gLabel.Size = UDim2.new(0, 15, 0, inputHeight)
-            gLabel.Position = UDim2.new(0, 162, 0, startY + 26)
-            gLabel.BackgroundTransparency = 1
-            gLabel.Text = "G:"
-            gLabel.TextColor3 = theme.Text
-            gLabel.Font = theme.Font
-            gLabel.TextSize = 12
-            gLabel.Parent = frame
-            
-            local gBox = Instance.new("TextBox")
-            gBox.Size = UDim2.new(0, inputWidth, 0, inputHeight)
-            gBox.Position = UDim2.new(0, 180, 0, startY + 26)
-            gBox.BackgroundColor3 = theme.AccentDarker
-            gBox.Text = tostring(math.floor(default.G * 255))
-            gBox.TextColor3 = theme.Text
-            gBox.Font = theme.Font
-            gBox.TextSize = 12
-            gBox.ClearTextOnFocus = false
-            gBox.Parent = frame
-            
-            local gbc = Instance.new("UICorner")
-            gbc.CornerRadius = UDim.new(0, 3)
-            gbc.Parent = gBox
-            
-            local bLabel = Instance.new("TextLabel")
-            bLabel.Size = UDim2.new(0, 15, 0, inputHeight)
-            bLabel.Position = UDim2.new(0, 162, 0, startY + 52)
-            bLabel.BackgroundTransparency = 1
-            bLabel.Text = "B:"
-            bLabel.TextColor3 = theme.Text
-            bLabel.Font = theme.Font
-            bLabel.TextSize = 12
-            bLabel.Parent = frame
-            
-            local bBox = Instance.new("TextBox")
-            bBox.Size = UDim2.new(0, inputWidth, 0, inputHeight)
-            bBox.Position = UDim2.new(0, 180, 0, startY + 52)
-            bBox.BackgroundColor3 = theme.AccentDarker
-            bBox.Text = tostring(math.floor(default.B * 255))
-            bBox.TextColor3 = theme.Text
-            bBox.Font = theme.Font
-            bBox.TextSize = 12
-            bBox.ClearTextOnFocus = false
-            bBox.Parent = frame
-            
-            local bbc = Instance.new("UICorner")
-            bbc.CornerRadius = UDim.new(0, 3)
-            bbc.Parent = bBox
-            
-            -- Hex Input
-            local hexLabel = Instance.new("TextLabel")
-            hexLabel.Size = UDim2.new(0, 30, 0, inputHeight)
-            hexLabel.Position = UDim2.new(0, 12, 0, 164)
-            hexLabel.BackgroundTransparency = 1
-            hexLabel.Text = "HEX:"
-            hexLabel.TextColor3 = theme.Text
-            hexLabel.Font = theme.Font
-            hexLabel.TextSize = 12
-            hexLabel.Parent = frame
-            
-            local hexBox = Instance.new("TextBox")
-            hexBox.Size = UDim2.new(0, 80, 0, inputHeight)
-            hexBox.Position = UDim2.new(0, 48, 0, 164)
-            hexBox.BackgroundColor3 = theme.AccentDarker
-            hexBox.Text = string.format("#%02X%02X%02X", math.floor(default.R * 255), math.floor(default.G * 255), math.floor(default.B * 255))
-            hexBox.TextColor3 = theme.Text
-            hexBox.Font = theme.Font
-            hexBox.TextSize = 12
-            hexBox.ClearTextOnFocus = false
-            hexBox.Parent = frame
-            
-            local hexc = Instance.new("UICorner")
-            hexc.CornerRadius = UDim.new(0, 3)
-            hexc.Parent = hexBox
-            
-            -- Copy/Apply buttons
-            local copyBtn = Instance.new("TextButton")
-            copyBtn.Size = UDim2.new(0, 60, 0, 24)
-            copyBtn.Position = UDim2.new(0, 140, 0, 162)
-            copyBtn.BackgroundColor3 = theme.AccentDarker
-            copyBtn.Text = "Copy"
-            copyBtn.TextColor3 = theme.Text
-            copyBtn.Font = theme.Font
-            copyBtn.TextSize = 11
-            copyBtn.Parent = frame
-            
-            local copyc = Instance.new("UICorner")
-            copyc.CornerRadius = UDim.new(0, 4)
-            copyc.Parent = copyBtn
-            
-            local applyBtn = Instance.new("TextButton")
-            applyBtn.Size = UDim2.new(0, 60, 0, 24)
-            applyBtn.Position = UDim2.new(0, 208, 0, 162)
-            applyBtn.BackgroundColor3 = theme.Accent
-            applyBtn.Text = "Apply"
-            applyBtn.TextColor3 = Color3.new(0, 0, 0)
-            applyBtn.Font = theme.Font
-            applyBtn.TextSize = 11
-            applyBtn.Parent = frame
-            
-            local applyc = Instance.new("UICorner")
-            applyc.CornerRadius = UDim.new(0, 4)
-            applyc.Parent = applyBtn
+            openBtn.MouseButton1Click:Connect(openModal)
             
             -- API
             local api = {}
+            local currentColor = default
             
             function api:GetColor()
                 return currentColor
@@ -1390,164 +1569,9 @@ function SmileUILib:CreateWindow(options)
             
             function api:SetColor(color)
                 currentColor = color
-                h, s, v = Color3ToHSV(color)
-                
-                -- Update visuals
-                previewFrame.BackgroundColor3 = color
-                satGradient.Color = ColorSequence.new({
-                    ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
-                    ColorSequenceKeypoint.new(1, HSVToColor3(h, 1, 1))
-                })
-                cursor.Position = UDim2.new(s, -4, 1 - v, -4)
-                hueCursor.Position = UDim2.new(h, -2, 0, -2)
-                
-                -- Update inputs
-                rBox.Text = tostring(math.floor(color.R * 255))
-                gBox.Text = tostring(math.floor(color.G * 255))
-                bBox.Text = tostring(math.floor(color.B * 255))
-                hexBox.Text = string.format("#%02X%02X%02X", math.floor(color.R * 255), math.floor(color.G * 255), math.floor(color.B * 255))
-                
+                previewBox.BackgroundColor3 = color
                 if callback then callback(color) end
             end
-            
-            -- Update function
-            local function updateFromHSV()
-                currentColor = HSVToColor3(h, s, v)
-                previewFrame.BackgroundColor3 = currentColor
-                
-                rBox.Text = tostring(math.floor(currentColor.R * 255))
-                gBox.Text = tostring(math.floor(currentColor.G * 255))
-                bBox.Text = tostring(math.floor(currentColor.B * 255))
-                hexBox.Text = string.format("#%02X%02X%02X", math.floor(currentColor.R * 255), math.floor(currentColor.G * 255), math.floor(currentColor.B * 255))
-                
-                if callback then callback(currentColor) end
-            end
-            
-            -- Spectrum dragging
-            local spectrumDragging = false
-            spectrumFrame.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                    spectrumDragging = true
-                    local relX = math.clamp((input.Position.X - spectrumFrame.AbsolutePosition.X) / spectrumFrame.AbsoluteSize.X, 0, 1)
-                    local relY = math.clamp((input.Position.Y - spectrumFrame.AbsolutePosition.Y) / spectrumFrame.AbsoluteSize.Y, 0, 1)
-                    s = relX
-                    v = 1 - relY
-                    cursor.Position = UDim2.new(s, -4, 1 - v, -4)
-                    updateFromHSV()
-                end
-            end)
-            
-            spectrumFrame.InputChanged:Connect(function(input)
-                if spectrumDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                    local relX = math.clamp((input.Position.X - spectrumFrame.AbsolutePosition.X) / spectrumFrame.AbsoluteSize.X, 0, 1)
-                    local relY = math.clamp((input.Position.Y - spectrumFrame.AbsolutePosition.Y) / spectrumFrame.AbsoluteSize.Y, 0, 1)
-                    s = relX
-                    v = 1 - relY
-                    cursor.Position = UDim2.new(s, -4, 1 - v, -4)
-                    updateFromHSV()
-                end
-            end)
-            
-            UserInputService.InputEnded:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                    spectrumDragging = false
-                end
-            end)
-            
-            -- Hue dragging
-            local hueDragging = false
-            hueFrame.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                    hueDragging = true
-                    local relX = math.clamp((input.Position.X - hueFrame.AbsolutePosition.X) / hueFrame.AbsoluteSize.X, 0, 1)
-                    h = relX
-                    hueCursor.Position = UDim2.new(h, -2, 0, -2)
-                    satGradient.Color = ColorSequence.new({
-                        ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
-                        ColorSequenceKeypoint.new(1, HSVToColor3(h, 1, 1))
-                    })
-                    updateFromHSV()
-                end
-            end)
-            
-            hueFrame.InputChanged:Connect(function(input)
-                if hueDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                    local relX = math.clamp((input.Position.X - hueFrame.AbsolutePosition.X) / hueFrame.AbsoluteSize.X, 0, 1)
-                    h = relX
-                    hueCursor.Position = UDim2.new(h, -2, 0, -2)
-                    satGradient.Color = ColorSequence.new({
-                        ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
-                        ColorSequenceKeypoint.new(1, HSVToColor3(h, 1, 1))
-                    })
-                    updateFromHSV()
-                end
-            end)
-            
-            UserInputService.InputEnded:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                    hueDragging = false
-                end
-            end)
-            
-            -- RGB Input handlers
-            local function updateFromRGB()
-                local r = math.clamp(tonumber(rBox.Text) or 0, 0, 255) / 255
-                local g = math.clamp(tonumber(gBox.Text) or 0, 0, 255) / 255
-                local b = math.clamp(tonumber(bBox.Text) or 0, 0, 255) / 255
-                api:SetColor(Color3.new(r, g, b))
-            end
-            
-            rBox.FocusLost:Connect(updateFromRGB)
-            gBox.FocusLost:Connect(updateFromRGB)
-            bBox.FocusLost:Connect(updateFromRGB)
-            
-            -- Hex Input handler
-            hexBox.FocusLost:Connect(function()
-                local hex = hexBox.Text:gsub("#", "")
-                if #hex == 6 then
-                    local r = tonumber(hex:sub(1, 2), 16) or 0
-                    local g = tonumber(hex:sub(3, 4), 16) or 0
-                    local b = tonumber(hex:sub(5, 6), 16) or 0
-                    api:SetColor(Color3.fromRGB(r, g, b))
-                end
-            end)
-            
-            -- Copy button
-            copyBtn.MouseButton1Click:Connect(function()
-                local hex = string.format("#%02X%02X%02X", math.floor(currentColor.R * 255), math.floor(currentColor.G * 255), math.floor(currentColor.B * 255))
-                -- In a real executor, you'd use setclipboard(hex)
-                print("Color copied:", hex)
-                SmileUILib:Notify({
-                    title = "Color Copied",
-                    message = hex .. " copied to clipboard!",
-                    duration = 2
-                })
-            end)
-            
-            -- Apply button (trigger callback)
-            applyBtn.MouseButton1Click:Connect(function()
-                if callback then callback(currentColor) end
-                SmileUILib:Notify({
-                    title = "Color Applied",
-                    message = "Color has been applied!",
-                    duration = 2
-                })
-            end)
-            
-            -- Hover effects
-            copyBtn.MouseEnter:Connect(function()
-                TweenService:Create(copyBtn, TweenInfo.new(0.2), {BackgroundColor3 = theme.Accent}):Play()
-            end)
-            copyBtn.MouseLeave:Connect(function()
-                TweenService:Create(copyBtn, TweenInfo.new(0.2), {BackgroundColor3 = theme.AccentDarker}):Play()
-            end)
-            
-            applyBtn.MouseEnter:Connect(function()
-                TweenService:Create(applyBtn, TweenInfo.new(0.2), {BackgroundColor3 = theme.AccentDark}):Play()
-            end)
-            applyBtn.MouseLeave:Connect(function()
-                TweenService:Create(applyBtn, TweenInfo.new(0.2), {BackgroundColor3 = theme.Accent}):Play()
-            end)
             
             return api
         end
