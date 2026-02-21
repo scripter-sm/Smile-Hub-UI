@@ -13,7 +13,6 @@ local SmileUILib = {}
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
-local HttpService = game:GetService("HttpService")
 SmileUILib.Theme = {
     Background = Color3.fromRGB(0, 0, 0),
     Header = Color3.fromRGB(0, 20, 0),
@@ -148,13 +147,6 @@ function SmileUILib:CreateWindow(options)
     local iconText = options.iconText or "$"
     local tabsWidth = options.tabsWidth or 152
     local contentOffset = options.contentOffset or 176
-    local folderPath = "Smile Hub GUI/" .. title .. "/"
-    if not isfolder("Smile Hub GUI") then
-        makefolder("Smile Hub GUI")
-    end
-    if not isfolder(folderPath) then
-        makefolder(folderPath)
-    end
     local screen = Instance.new("ScreenGui")
     screen.Name = "SmileUI_" .. math.floor(tick() * 1000)
     screen.ResetOnSpawn = false
@@ -270,9 +262,6 @@ function SmileUILib:CreateWindow(options)
         end
     end)
     local window = {}
-    window.Elements = {}
-    window.autoSave = false
-    window.folderPath = folderPath
     local activePage = nil
     function window:AddTab(tabOptions)
         local tabName = tabOptions.name or "Tab"
@@ -424,7 +413,6 @@ function SmileUILib:CreateWindow(options)
             local callback = togOptions.callback
             local height = togOptions.height or theme.ToggleHeight
             local bgColor = togOptions.bgColor or theme.AccentVeryDark
-            local configKey = togOptions.configKey
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -8, 0, height)
             frame.BackgroundColor3 = bgColor
@@ -462,18 +450,12 @@ function SmileUILib:CreateWindow(options)
                     BackgroundColor3 = state and theme.Accent or theme.AccentDarker
                 }):Play()
                 if callback then callback(state) end
-                if window.autoSave then
-                    window:SaveConfig("AutomaticConfig")
-                end
             end
             box.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 then
                     api:SetState(not state)
                 end
             end)
-            if configKey then
-                window.Elements[configKey] = {type = "toggle", api = api}
-            end
             return api
         end
         function tabAPI:AddSlider(sliderOptions)
@@ -485,7 +467,6 @@ function SmileUILib:CreateWindow(options)
             local height = sliderOptions.height or theme.SliderHeight
             local bgColor = sliderOptions.bgColor or theme.AccentVeryDark
             local step = sliderOptions.step or 1
-            local configKey = sliderOptions.configKey
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -8, 0, height)
             frame.BackgroundColor3 = bgColor
@@ -531,9 +512,6 @@ function SmileUILib:CreateWindow(options)
                 fill.Size = UDim2.new((value - min) / (max - min), 0, 1, 0)
                 lbl.Text = name .. ": " .. value
                 if callback then callback(value) end
-                if window.autoSave then
-                    window:SaveConfig("AutomaticConfig")
-                end
             end
             local dragging = false
             local dragInputConn
@@ -562,9 +540,6 @@ function SmileUILib:CreateWindow(options)
                 if dragInputConn then dragInputConn:Disconnect() end
                 if dragEndConn then dragEndConn:Disconnect() end
             end)
-            if configKey then
-                window.Elements[configKey] = {type = "slider", api = api}
-            end
             return api
         end
         function tabAPI:AddDropdown(dropOptions)
@@ -574,7 +549,6 @@ function SmileUILib:CreateWindow(options)
             local callback = dropOptions.callback
             local height = dropOptions.height or theme.DropdownHeight
             local bgColor = dropOptions.bgColor or theme.AccentVeryDark
-            local configKey = dropOptions.configKey
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -8, 0, height)
             frame.BackgroundColor3 = bgColor
@@ -625,9 +599,6 @@ function SmileUILib:CreateWindow(options)
                         selection = choice
                         selected.Text = choice
                         if callback then callback(selection) end
-                        if window.autoSave then
-                            window:SaveConfig("AutomaticConfig")
-                        end
                         return
                     end
                 end
@@ -637,13 +608,7 @@ function SmileUILib:CreateWindow(options)
                 selection = options[current]
                 selected.Text = selection
                 if callback then callback(selection) end
-                if window.autoSave then
-                    window:SaveConfig("AutomaticConfig")
-                end
             end)
-            if configKey then
-                window.Elements[configKey] = {type = "dropdown", api = api}
-            end
             return api
         end
         function tabAPI:AddKeybind(keyOptions)
@@ -653,7 +618,6 @@ function SmileUILib:CreateWindow(options)
             local height = keyOptions.height or theme.KeybindHeight
             local bgColor = keyOptions.bgColor or theme.AccentVeryDark
             local allowMouse = keyOptions.allowMouse or false
-            local configKey = keyOptions.configKey
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -8, 0, height)
             frame.BackgroundColor3 = bgColor
@@ -695,9 +659,6 @@ function SmileUILib:CreateWindow(options)
                 currentKey = key
                 btn.Text = currentKey.Name
                 if callback then callback(currentKey) end
-                if window.autoSave then
-                    window:SaveConfig("AutomaticConfig")
-                end
             end
             btn.MouseButton1Click:Connect(function()
                 listening = true
@@ -718,9 +679,6 @@ function SmileUILib:CreateWindow(options)
             frame.Destroying:Connect(function()
                 inputConn:Disconnect()
             end)
-            if configKey then
-                window.Elements[configKey] = {type = "keybind", api = api}
-            end
             return api
         end
         function tabAPI:AddTextbox(tbOptions)
@@ -729,7 +687,6 @@ function SmileUILib:CreateWindow(options)
             local callback = tbOptions.callback
             local height = tbOptions.height or theme.TextboxHeight
             local bgColor = tbOptions.bgColor or theme.AccentVeryDark
-            local configKey = tbOptions.configKey
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -8, 0, height)
             frame.BackgroundColor3 = bgColor
@@ -770,9 +727,6 @@ function SmileUILib:CreateWindow(options)
                 text = newText
                 textbox.Text = newText
                 if callback then callback(text) end
-                if window.autoSave then
-                    window:SaveConfig("AutomaticConfig")
-                end
             end
             textbox.FocusLost:Connect(function(enterPressed)
                 if enterPressed then
@@ -781,9 +735,6 @@ function SmileUILib:CreateWindow(options)
                     textbox.Text = text
                 end
             end)
-            if configKey then
-                window.Elements[configKey] = {type = "textbox", api = api}
-            end
             return api
         end
         function tabAPI:AddProgressBar(pbOptions)
@@ -792,7 +743,6 @@ function SmileUILib:CreateWindow(options)
             local value = pbOptions.value or 0
             local height = pbOptions.height or 40
             local bgColor = pbOptions.bgColor or theme.AccentVeryDark
-            local configKey = pbOptions.configKey
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -8, 0, height)
             frame.BackgroundColor3 = bgColor
@@ -845,84 +795,10 @@ function SmileUILib:CreateWindow(options)
                     Size = UDim2.new(newValue / max, 0, 1, 0)
                 }):Play()
                 lbl.Text = name .. ": " .. math.floor((newValue / max) * 100) .. "%"
-                if window.autoSave then
-                    window:SaveConfig("AutomaticConfig")
-                end
-            end
-            if configKey then
-                window.Elements[configKey] = {type = "progress", api = api}
             end
             return api
         end
         return tabAPI
-    end
-    function window:SaveConfig(name)
-        local cfg = {}
-        for key, el in pairs(self.Elements) do
-            if el.type == "toggle" then
-                cfg[key] = el.api:GetState()
-            elseif el.type == "slider" then
-                cfg[key] = el.api:GetValue()
-            elseif el.type == "dropdown" then
-                cfg[key] = el.api:GetSelection()
-            elseif el.type == "keybind" then
-                cfg[key] = {EnumType = el.api:GetKey().EnumType.Name, Name = el.api:GetKey().Name}
-            elseif el.type == "textbox" then
-                cfg[key] = el.api:GetText()
-            elseif el.type == "progress" then
-                cfg[key] = el.api:GetValue()
-            end
-        end
-        local json = HttpService:JSONEncode(cfg)
-        writefile(self.folderPath .. name .. ".json", json)
-    end
-    function window:LoadConfig(name)
-        local file = self.folderPath .. name .. ".json"
-        if not isfile(file) then return end
-        local json = readfile(file)
-        local cfg = HttpService:JSONDecode(json)
-        for key, val in pairs(cfg) do
-            local el = self.Elements[key]
-            if el then
-                if el.type == "toggle" then
-                    el.api:SetState(val)
-                elseif el.type == "slider" then
-                    el.api:SetValue(val)
-                elseif el.type == "dropdown" then
-                    el.api:SetSelection(val)
-                elseif el.type == "keybind" then
-                    local enum = Enum[val.EnumType][val.Name]
-                    el.api:SetKey(enum)
-                elseif el.type == "textbox" then
-                    el.api:SetText(val)
-                elseif el.type == "progress" then
-                    el.api:SetValue(val)
-                end
-            end
-        end
-    end
-    function window:DeleteConfig(name)
-        local file = self.folderPath .. name .. ".json"
-        if isfile(file) then
-            delfile(file)
-        end
-    end
-    function window:GetConfigs()
-        local configs = {}
-        if listfiles then
-            for _, file in ipairs(listfiles(self.folderPath)) do
-                local filename = file:match("[^/]+$")
-                if filename:match("%.json$") then
-                    table.insert(configs, filename:match("(.+)%.json$"))
-                end
-            end
-        end
-        table.sort(configs)
-        return configs
-    end
-    function window:EnableAutoConfig()
-        self:LoadConfig("AutomaticConfig")
-        self.autoSave = true
     end
     main.Size = UDim2.new(0, 0, 0, 0)
     main.BackgroundTransparency = 1
