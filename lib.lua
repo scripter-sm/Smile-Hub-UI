@@ -901,11 +901,17 @@ function SmileUILib:CreateWindow(options)
             end
         end
     end
+    function window:DeleteConfig(name)
+        local file = self.folderPath .. name .. ".json"
+        if isfile(file) then
+            delfile(file)
+        end
+    end
     function window:GetConfigs()
         local configs = {}
         if listfiles then
             for _, file in ipairs(listfiles(self.folderPath)) do
-                local filename = file:match("[^/]+$") -- Get filename from path
+                local filename = file:match("[^/]+$")
                 if filename:match("%.json$") then
                     table.insert(configs, filename:match("(.+)%.json$"))
                 end
