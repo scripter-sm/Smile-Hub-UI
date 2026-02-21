@@ -7,13 +7,12 @@
 /_______  /__|_|  /__|____/\___  >  \___|_  /|____/|___  / 
         \/      \/             \/         \/           \/  
 
---]]
+]]
 
 local SmileUILib = {}
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
-
 SmileUILib.Theme = {
     Background = Color3.fromRGB(0, 0, 0),
     Header = Color3.fromRGB(0, 20, 0),
@@ -49,7 +48,6 @@ SmileUILib.Theme = {
     NotificationOutSpeed = 0.52,
     WindowOpenSpeed = 0.7
 }
-
 local notifContainer
 local function initNotifications()
     if notifContainer then return end
@@ -70,14 +68,12 @@ local function initNotifications()
     layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
     layout.Parent = notifContainer
 end
-
 function SmileUILib:Notify(options)
     local title = options.title or "INFO"
     local message = options.message or ""
     local duration = options.duration or 3.7
     local width = options.width or 400
     local theme = options.theme or SmileUILib.Theme
-
     initNotifications()
     local notif = Instance.new("Frame")
     notif.BackgroundColor3 = theme.Background
@@ -124,7 +120,6 @@ function SmileUILib:Notify(options)
     content.AutomaticSize = Enum.AutomaticSize.Y
     content.Size = UDim2.new(1, -20, 0, 0)
     content.Parent = notif
-    -- Wait for TextBounds to update
     task.wait()
     local textHeight = content.TextBounds.Y
     local notifHeight = theme.NotificationHeaderHeight + textHeight + 10
@@ -143,7 +138,6 @@ function SmileUILib:Notify(options)
         out.Completed:Connect(function() notif:Destroy() end)
     end)
 end
-
 function SmileUILib:CreateWindow(options)
     local title = options.title or "SMILE UI"
     local width = options.width or 580
@@ -152,7 +146,6 @@ function SmileUILib:CreateWindow(options)
     local iconText = options.iconText or "$"
     local tabsWidth = options.tabsWidth or 152
     local contentOffset = options.contentOffset or 176
-
     local screen = Instance.new("ScreenGui")
     screen.Name = "SmileUI_" .. math.floor(tick() * 1000)
     screen.ResetOnSpawn = false
@@ -241,7 +234,6 @@ function SmileUILib:CreateWindow(options)
     content.Position = UDim2.new(0, contentOffset - 12, 0, theme.WindowHeaderHeight)
     content.BackgroundTransparency = 1
     content.Parent = main
-    -- Custom dragging on header
     local dragging = false
     local dragStartPos
     local startGuiPos
@@ -272,7 +264,6 @@ function SmileUILib:CreateWindow(options)
     function window:AddTab(tabOptions)
         local tabName = tabOptions.name or "Tab"
         local theme = tabOptions.theme or SmileUILib.Theme
-
         local tabBtn = Instance.new("TextButton")
         tabBtn.Size = UDim2.new(1, -12, 0, theme.TabButtonHeight)
         tabBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
@@ -341,7 +332,6 @@ function SmileUILib:CreateWindow(options)
             local title = secOptions.title or "Section"
             local textSize = secOptions.textSize or 16
             local textColor = secOptions.textColor or theme.Text
-
             local lbl = Instance.new("TextLabel")
             lbl.Size = UDim2.new(1, 0, 0, 0)
             lbl.AutomaticSize = Enum.AutomaticSize.Y
@@ -360,7 +350,6 @@ function SmileUILib:CreateWindow(options)
             local text = lblOptions.text or "Label"
             local textSize = lblOptions.textSize or 14
             local textColor = lblOptions.textColor or theme.TextDim
-
             local lbl = Instance.new("TextLabel")
             lbl.Size = UDim2.new(1, 0, 0, 0)
             lbl.AutomaticSize = Enum.AutomaticSize.Y
@@ -376,7 +365,6 @@ function SmileUILib:CreateWindow(options)
         end
         function tabAPI:AddSpacer(spacerOptions)
             local height = spacerOptions.height or theme.SpacerDefaultHeight
-
             local spacer = Instance.new("Frame")
             spacer.Size = UDim2.new(1, 0, 0, height)
             spacer.BackgroundTransparency = 1
@@ -389,7 +377,6 @@ function SmileUILib:CreateWindow(options)
             local callback = togOptions.callback
             local height = togOptions.height or theme.ToggleHeight
             local bgColor = togOptions.bgColor or theme.AccentVeryDark
-
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -8, 0, height)
             frame.BackgroundColor3 = bgColor
@@ -433,7 +420,6 @@ function SmileUILib:CreateWindow(options)
             local height = btnOptions.height or theme.ButtonHeight
             local bgColor = btnOptions.bgColor or theme.AccentDarker
             local hoverColor = btnOptions.hoverColor or theme.Accent
-
             local btn = Instance.new("TextButton")
             btn.Size = UDim2.new(1, -8, 0, height)
             btn.BackgroundColor3 = bgColor
@@ -470,7 +456,6 @@ function SmileUILib:CreateWindow(options)
             local height = sliderOptions.height or theme.SliderHeight
             local bgColor = sliderOptions.bgColor or theme.AccentVeryDark
             local step = sliderOptions.step or 1
-
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -8, 0, height)
             frame.BackgroundColor3 = bgColor
@@ -544,7 +529,6 @@ function SmileUILib:CreateWindow(options)
             local callback = dropOptions.callback
             local height = dropOptions.height or theme.DropdownHeight
             local bgColor = dropOptions.bgColor or theme.AccentVeryDark
-
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -8, 0, height)
             frame.BackgroundColor3 = bgColor
@@ -597,8 +581,7 @@ function SmileUILib:CreateWindow(options)
             local callback = keyOptions.callback
             local height = keyOptions.height or theme.KeybindHeight
             local bgColor = keyOptions.bgColor or theme.AccentVeryDark
-            local allowMouse = keyOptions.allowMouse or false  -- New: allow mouse buttons
-
+            local allowMouse = keyOptions.allowMouse or false
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -8, 0, height)
             frame.BackgroundColor3 = bgColor
@@ -651,7 +634,6 @@ function SmileUILib:CreateWindow(options)
                 end
                 if callback then callback(currentKey) end
             end)
-            -- Disconnect on destroy
             frame.Destroying:Connect(function()
                 inputConn:Disconnect()
             end)
@@ -663,7 +645,6 @@ function SmileUILib:CreateWindow(options)
             local callback = tbOptions.callback
             local height = tbOptions.height or theme.TextboxHeight
             local bgColor = tbOptions.bgColor or theme.AccentVeryDark
-
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -8, 0, height)
             frame.BackgroundColor3 = bgColor
@@ -702,14 +683,12 @@ function SmileUILib:CreateWindow(options)
             end)
             return frame
         end
-        -- Add more elements as needed, e.g., ProgressBar, ImageLabel, etc.
         function tabAPI:AddProgressBar(pbOptions)
             local name = pbOptions.name or "Progress"
             local max = pbOptions.max or 100
             local value = pbOptions.value or 0
             local height = pbOptions.height or 40
             local bgColor = pbOptions.bgColor or theme.AccentVeryDark
-
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -8, 0, height)
             frame.BackgroundColor3 = bgColor
@@ -718,8 +697,8 @@ function SmileUILib:CreateWindow(options)
             c.CornerRadius = theme.ElementCornerRadius
             c.Parent = frame
             local lbl = Instance.new("TextLabel")
-            lbl.Size = UDim2.new(1, -20, 1, 0)
-            lbl.Position = UDim2.new(0, 12, 0, 0)
+            lbl.Size = UDim2.new(1, -20, 0, 20)
+            lbl.Position = UDim2.new(0, 12, 0, 4)
             lbl.BackgroundTransparency = 1
             lbl.Text = name .. ": " .. math.floor((value / max) * 100) .. "%"
             lbl.TextColor3 = theme.Text
@@ -730,7 +709,7 @@ function SmileUILib:CreateWindow(options)
             lbl.Parent = frame
             local track = Instance.new("Frame")
             track.Size = UDim2.new(1, -24, 0, 8)
-            track.Position = UDim2.new(0, 12, 0, height - 14)
+            track.Position = UDim2.new(0, 12, 0, 28)
             track.BackgroundColor3 = theme.AccentDarker
             track.Parent = frame
             local tc = Instance.new("UICorner")
@@ -740,13 +719,20 @@ function SmileUILib:CreateWindow(options)
             fill.Size = UDim2.new(value / max, 0, 1, 0)
             fill.BackgroundColor3 = theme.Accent
             fill.Parent = track
+            local gradient = Instance.new("UIGradient")
+            gradient.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, theme.Accent),
+                ColorSequenceKeypoint.new(1, theme.AccentDark)
+            })
+            gradient.Rotation = 0
+            gradient.Parent = fill
             local fc = Instance.new("UICorner")
             fc.CornerRadius = UDim.new(1, 0)
             fc.Parent = fill
             local api = {}
             function api:SetValue(newValue)
                 newValue = math.clamp(newValue, 0, max)
-                TweenService:Create(fill, TweenInfo.new(theme.AnimationSpeed), {
+                TweenService:Create(fill, TweenInfo.new(theme.AnimationSpeed, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
                     Size = UDim2.new(newValue / max, 0, 1, 0)
                 }):Play()
                 lbl.Text = name .. ": " .. math.floor((newValue / max) * 100) .. "%"
@@ -763,5 +749,4 @@ function SmileUILib:CreateWindow(options)
     }):Play()
     return window
 end
-
 return SmileUILib
