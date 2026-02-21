@@ -48,41 +48,6 @@ SmileUILib.Theme = {
     NotificationOutSpeed = 0.52,
     WindowOpenSpeed = 0.7
 }
-SmileUILib.LightTheme = {
-    Background = Color3.fromRGB(255, 255, 255),
-    Header = Color3.fromRGB(240, 240, 240),
-    Accent = Color3.fromRGB(0, 122, 255),
-    AccentDark = Color3.fromRGB(0, 86, 179),
-    AccentDarker = Color3.fromRGB(0, 64, 134),
-    AccentVeryDark = Color3.fromRGB(0, 43, 89),
-    Text = Color3.fromRGB(0, 0, 0),
-    TextDim = Color3.fromRGB(100, 100, 100),
-    StrokeColor = Color3.fromRGB(180, 180, 180),
-    CornerRadius = UDim.new(0, 6),
-    StrokeThickness = 1.8,
-    StrokeTransparency = 0.28,
-    Font = Enum.Font.Arcade,
-    NotificationCornerRadius = UDim.new(0, 10),
-    NotificationHeaderHeight = 34,
-    NotificationStrokeThickness = 2.2,
-    WindowHeaderHeight = 44,
-    WindowMinButtonSize = UDim2.new(0, 40, 0, 40),
-    WindowIconSize = UDim2.new(0, 56, 0, 56),
-    TabButtonHeight = 38,
-    TabButtonCornerRadius = UDim.new(0, 6),
-    ElementCornerRadius = UDim.new(0, 5),
-    ButtonHeight = 40,
-    ToggleHeight = 36,
-    SliderHeight = 58,
-    DropdownHeight = 40,
-    KeybindHeight = 38,
-    TextboxHeight = 40,
-    SpacerDefaultHeight = 8,
-    AnimationSpeed = 0.18,
-    NotificationInSpeed = 0.58,
-    NotificationOutSpeed = 0.52,
-    WindowOpenSpeed = 0.7
-}
 local notifContainer
 local function initNotifications()
     if notifContainer then return end
@@ -303,7 +268,7 @@ function SmileUILib:CreateWindow(options)
         local theme = tabOptions.theme or SmileUILib.Theme
         local tabBtn = Instance.new("TextButton")
         tabBtn.Size = UDim2.new(1, -12, 0, theme.TabButtonHeight)
-        tabBtn.BackgroundColor3 = theme.Background
+        tabBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
         tabBtn.Text = tabName
         tabBtn.TextColor3 = theme.TextDim
         tabBtn.Font = theme.Font
@@ -314,11 +279,6 @@ function SmileUILib:CreateWindow(options)
         local btnCorner = Instance.new("UICorner")
         btnCorner.CornerRadius = theme.TabButtonCornerRadius
         btnCorner.Parent = tabBtn
-        local tabStroke = Instance.new("UIStroke")
-        tabStroke.Color = theme.StrokeColor
-        tabStroke.Thickness = theme.StrokeThickness
-        tabStroke.Transparency = theme.StrokeTransparency
-        tabStroke.Parent = tabBtn
         local page = Instance.new("ScrollingFrame")
         page.Size = UDim2.new(1, 0, 1, 0)
         page.BackgroundTransparency = 1
@@ -344,7 +304,7 @@ function SmileUILib:CreateWindow(options)
         tabBtn.MouseLeave:Connect(function()
             if activePage ~= page then
                 TweenService:Create(tabBtn, TweenInfo.new(theme.AnimationSpeed), {
-                    BackgroundColor3 = theme.Background
+                    BackgroundColor3 = Color3.fromRGB(0, 0, 0)
                 }):Play()
             end
         end)
@@ -357,7 +317,7 @@ function SmileUILib:CreateWindow(options)
             for _, b in tabs:GetChildren() do
                 if b:IsA("TextButton") then
                     TweenService:Create(b, TweenInfo.new(theme.AnimationSpeed), {
-                        BackgroundColor3 = (b == tabBtn) and theme.AccentDarker or theme.Background,
+                        BackgroundColor3 = (b == tabBtn) and theme.AccentDarker or Color3.fromRGB(0, 0, 0),
                         TextColor3 = (b == tabBtn) and theme.Text or theme.TextDim
                     }):Play()
                 end
