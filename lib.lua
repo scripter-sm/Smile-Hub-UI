@@ -50,7 +50,7 @@ SmileUILib.Theme = {
 
 SmileUILib.Windows = {}
 SmileUILib.ThemeableElements = {}
-SmileUILib.ButtonRegistry = {} -- Store buttons for hover color updates
+SmileUILib.ButtonRegistry = {}
 
 local function RegisterElement(windowId, element, property, themeKey)
     if not SmileUILib.ThemeableElements[windowId] then
@@ -63,14 +63,13 @@ local function RegisterElement(windowId, element, property, themeKey)
     })
 end
 
--- Register button for hover color updates
 local function RegisterButton(windowId, button, isAccentButton)
     if not SmileUILib.ButtonRegistry[windowId] then
         SmileUILib.ButtonRegistry[windowId] = {}
     end
     table.insert(SmileUILib.ButtonRegistry[windowId], {
         Button = button,
-        IsAccentButton = isAccentButton -- true for AccentDarker buttons, false for regular
+        IsAccentButton = isAccentButton
     })
 end
 
@@ -79,7 +78,6 @@ function SmileUILib:SetTheme(newTheme)
         self.Theme[key] = value
     end
     
-    -- Update all registered elements
     for windowId, elements in pairs(self.ThemeableElements) do
         for _, data in ipairs(elements) do
             if data.Element and data.Element.Parent then
@@ -91,11 +89,9 @@ function SmileUILib:SetTheme(newTheme)
         end
     end
     
-    -- Update button hover colors
     for windowId, buttons in pairs(self.ButtonRegistry) do
         for _, data in ipairs(buttons) do
             if data.Button and data.Button.Parent then
-                -- Update current background to match new theme
                 if data.IsAccentButton then
                     data.Button.BackgroundColor3 = self.Theme.AccentDarker
                 end
@@ -584,7 +580,7 @@ function SmileUILib:CreateWindow(options)
             
             RegisterElement(windowId, btn, "BackgroundColor3", "AccentDarker")
             RegisterElement(windowId, btn, "TextColor3", "Text")
-            RegisterButton(windowId, btn, true) -- Register for hover updates
+            RegisterButton(windowId, btn, true)
             
             local c = Instance.new("UICorner")
             c.CornerRadius = theme.ElementCornerRadius
@@ -1151,13 +1147,13 @@ function SmileUILib:CreateWindow(options)
             return api
         end
         
-        -- FIXED MODAL COLOR PICKER - Properly aligned button
+        -- CLICK ON COLOR BOX TO OPEN COLORPICKER - NO BUTTON
         function tabAPI:AddColorPicker(cpOptions)
             local name = cpOptions.name or "Color Picker"
             local default = cpOptions.default or Color3.fromRGB(0, 255, 0)
             local callback = cpOptions.callback
             
-            -- Main container frame - FIXED HEIGHT
+            -- Main container - compact row
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -8, 0, 40)
             frame.BackgroundColor3 = theme.AccentVeryDark
@@ -1171,7 +1167,7 @@ function SmileUILib:CreateWindow(options)
             
             -- Label - LEFT SIDE
             local lbl = Instance.new("TextLabel")
-            lbl.Size = UDim2.new(0.5, -10, 1, 0)
+            lbl.Size = UDim2.new(1, -70, 1, 0)
             lbl.Position = UDim2.new(0, 14, 0, 0)
             lbl.BackgroundTransparency = 1
             lbl.Text = name
@@ -1184,48 +1180,37 @@ function SmileUILib:CreateWindow(options)
             
             RegisterElement(windowId, lbl, "TextColor3", "Text")
             
-            -- Color preview box - RIGHT SIDE before button
-            local previewBox = Instance.new("Frame")
-            previewBox.Size = UDim2.new(0, 28, 0, 28)
-            previewBox.Position = UDim2.new(1, -90, 0.5, -14)
-            previewBox.BackgroundColor3 = default
-            previewBox.BorderSizePixel = 2
-            previewBox.BorderColor3 = theme.StrokeColor
-            previewBox.Parent = frame
+            -- CLICKABLE COLOR BOX - RIGHT SIDE (opens colorpicker when clicked)
+            local colorBox = Instance.new("TextButton")
+            colorBox.Size = UDim2.new(0, 50, 0, 28)
+            colorBox.Position = UDim2.new(1, -62, 0.5, -14)
+            colorBox.BackgroundColor3 = default
+            colorBox.Text = ""
+            colorBox.AutoButtonColor = false
+            colorBox.Parent = frame
             
-            local pbc = Instance.new("UICorner")
-            pbc.CornerRadius = UDim.new(0, 4)
-            pbc.Parent = previewBox
+            local cbc = Instance.new("UICorner")
+            cbc.CornerRadius = UDim.new(0, 4)
+            cbc.Parent = colorBox
             
-            -- Open button - FAR RIGHT
-            local openBtn = Instance.new("TextButton")
-            openBtn.Size = UDim2.new(0, 70, 0, 28)
-            openBtn.Position = UDim2.new(1, -78, 0.5, -14)
-            openBtn.BackgroundColor3 = theme.AccentDarker
-            openBtn.Text = "Pick"
-            openBtn.TextColor3 = theme.Text
-            openBtn.Font = theme.Font
-            openBtn.TextSize = 13
-            openBtn.Parent = frame
+            -- Border stroke for color box
+            local boxStroke = Instance.new("UIStroke")
+            boxStroke.Color = theme.StrokeColor
+            boxStroke.Thickness = 2
+            boxStroke.Parent = colorBox
             
-            RegisterElement(windowId, openBtn, "BackgroundColor3", "AccentDarker")
-            RegisterElement(windowId, openBtn, "TextColor3", "Text")
-            RegisterButton(windowId, openBtn, true)
+            RegisterElement(windowId, boxStroke, "Color", "StrokeColor")
             
-            local obc = Instance.new("UICorner")
-            obc.CornerRadius = UDim.new(0, 4)
-            obc.Parent = openBtn
-            
-            -- Hover effects using current theme
-            openBtn.MouseEnter:Connect(function()
-                TweenService:Create(openBtn, TweenInfo.new(0.2), {
-                    BackgroundColor3 = SmileUILib.Theme.Accent
+            -- Hover effect for color box
+            colorBox.MouseEnter:Connect(function()
+                TweenService:Create(boxStroke, TweenInfo.new(0.2), {
+                    Thickness = 3
                 }):Play()
             end)
             
-            openBtn.MouseLeave:Connect(function()
-                TweenService:Create(openBtn, TweenInfo.new(0.2), {
-                    BackgroundColor3 = SmileUILib.Theme.AccentDarker
+            colorBox.MouseLeave:Connect(function()
+                TweenService:Create(boxStroke, TweenInfo.new(0.2), {
+                    Thickness = 2
                 }):Play()
             end)
             
@@ -1498,7 +1483,7 @@ function SmileUILib:CreateWindow(options)
                 local function updateColor()
                     currentColor = HSVToColor3(h, s, v)
                     bigPreview.BackgroundColor3 = currentColor
-                    previewBox.BackgroundColor3 = currentColor
+                    colorBox.BackgroundColor3 = currentColor
                     
                     local r = math.floor(currentColor.R * 255)
                     local g = math.floor(currentColor.G * 255)
@@ -1602,7 +1587,8 @@ function SmileUILib:CreateWindow(options)
                 }):Play()
             end
             
-            openBtn.MouseButton1Click:Connect(openModal)
+            -- CLICK ON COLOR BOX TO OPEN COLORPICKER
+            colorBox.MouseButton1Click:Connect(openModal)
             
             -- API
             local api = {}
@@ -1614,7 +1600,7 @@ function SmileUILib:CreateWindow(options)
             
             function api:SetColor(color)
                 currentColor = color
-                previewBox.BackgroundColor3 = color
+                colorBox.BackgroundColor3 = color
                 if callback then callback(color) end
             end
             
