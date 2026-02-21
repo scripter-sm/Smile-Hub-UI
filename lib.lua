@@ -7,7 +7,7 @@
 /_______  /__|_|  /__|____/\___  >  \___|_  /|____/|___  / 
         \/      \/             \/         \/           \/  
 
-]]
+ ]]
 
 local SmileUILib = {}
 local TweenService = game:GetService("TweenService")
@@ -121,6 +121,7 @@ function SmileUILib:Notify(options)
     content.AutomaticSize = Enum.AutomaticSize.Y
     content.Size = UDim2.new(1, -20, 0, 0)
     content.Parent = notif
+    -- Wait for TextBounds to update
     task.wait()
     local textHeight = content.TextBounds.Y
     local notifHeight = theme.NotificationHeaderHeight + textHeight + 10
@@ -147,6 +148,15 @@ function SmileUILib:CreateWindow(options)
     local iconText = options.iconText or "$"
     local tabsWidth = options.tabsWidth or 152
     local contentOffset = options.contentOffset or 176
+    local autoConfig = options.autoConfig or false
+    local baseFolder = "Smile Hub GUI"
+    local scriptFolder = baseFolder .. "/" .. title
+    if not isfolder(baseFolder) then
+        makefolder(baseFolder)
+    end
+    if not isfolder(scriptFolder) then
+        makefolder(scriptFolder)
+    end
     local screen = Instance.new("ScreenGui")
     screen.Name = "SmileUI_" .. math.floor(tick() * 1000)
     screen.ResetOnSpawn = false
@@ -235,6 +245,7 @@ function SmileUILib:CreateWindow(options)
     content.Position = UDim2.new(0, contentOffset - 12, 0, theme.WindowHeaderHeight)
     content.BackgroundTransparency = 1
     content.Parent = main
+    -- Custom dragging on header
     local dragging = false
     local dragStartPos
     local startGuiPos
@@ -262,6 +273,9 @@ function SmileUILib:CreateWindow(options)
     end)
     local window = {}
     window.Elements = {}
+    window.title = title
+    window.scriptFolder = scriptFolder
+    window.autoConfig = autoConfig
     local activePage = nil
     function window:AddTab(tabOptions)
         local tabName = tabOptions.name or "Tab"
@@ -450,6 +464,9 @@ function SmileUILib:CreateWindow(options)
                     BackgroundColor3 = state and theme.Accent or theme.AccentDarker
                 }):Play()
                 if callback then callback(state) end
+                if window.autoConfig then
+                    window:SaveConfig("AutomaticConfig")
+                end
             end
             box.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -516,6 +533,9 @@ function SmileUILib:CreateWindow(options)
                 fill.Size = UDim2.new((value - min) / (max - min), 0, 1, 0)
                 lbl.Text = name .. ": " .. value
                 if callback then callback(value) end
+                if window.autoConfig then
+                    window:SaveConfig("AutomaticConfig")
+                end
             end
             local dragging = false
             local dragInputConn
@@ -607,6 +627,9 @@ function SmileUILib:CreateWindow(options)
                         selection = choice
                         selected.Text = choice
                         if callback then callback(selection) end
+                        if window.autoConfig then
+                            window:SaveConfig("AutomaticConfig")
+                        end
                         return
                     end
                 end
@@ -616,6 +639,9 @@ function SmileUILib:CreateWindow(options)
                 selection = options[current]
                 selected.Text = selection
                 if callback then callback(selection) end
+                if window.autoConfig then
+                    window:SaveConfig("AutomaticConfig")
+                end
             end)
             if configKey then
                 window.Elements[configKey] = {type = "dropdown", api = api}
@@ -671,6 +697,9 @@ function SmileUILib:CreateWindow(options)
                 currentKey = key
                 btn.Text = currentKey.Name
                 if callback then callback(currentKey) end
+                if window.autoConfig then
+                    window:SaveConfig("AutomaticConfig")
+                end
             end
             btn.MouseButton1Click:Connect(function()
                 listening = true
@@ -743,6 +772,9 @@ function SmileUILib:CreateWindow(options)
                 text = newText
                 textbox.Text = newText
                 if callback then callback(text) end
+                if window.autoConfig then
+                    window:SaveConfig("AutomaticConfig")
+                end
             end
             textbox.FocusLost:Connect(function(enterPressed)
                 if enterPressed then
@@ -815,6 +847,9 @@ function SmileUILib:CreateWindow(options)
                     Size = UDim2.new(newValue / max, 0, 1, 0)
                 }):Play()
                 lbl.Text = name .. ": " .. math.floor((newValue / max) * 100) .. "%"
+                if window.autoConfig then
+                    window:SaveConfig("AutomaticConfig")
+                end
             end
             if configKey then
                 window.Elements[configKey] = {type = "progress", api = api}
@@ -824,48 +859,41 @@ function SmileUILib:CreateWindow(options)
         return tabAPI
     end
     function window:SaveConfig(name)
-        if not isfolder("Smile Hub GUI") then
-            makefolder("Smile Hub GUI")
-        end
         local cfg = {}
         for key, el in pairs(self.Elements) do
             if el.type == "toggle" then
                 cfg[key] = el.api:GetState()
-            elseif el.type == "slider" then
+            elseif el.type == "slider" or el.type == "progress" then
                 cfg[key] = el.api:GetValue()
-            elseif el.type == "dropdown" then
-                cfg[key] = el.api:GetSelection()
+            elseif el.type == "dropdown" or el.type == "textbox" then
+                cfg[key] = el.api:GetSelection and el.api:GetSelection() or el.api:GetText()
             elseif el.type == "keybind" then
-                cfg[key] = {EnumType = el.api:GetKey().EnumType.Name, Name = el.api:GetKey().Name}
-            elseif el.type == "textbox" then
-                cfg[key] = el.api:GetText()
-            elseif el.type == "progress" then
-                cfg[key] = el.api:GetValue()
+                local currentKey = el.api:GetKey()
+                cfg[key] = {EnumType = currentKey.EnumType.Name, Name = currentKey.Name}
             end
         end
         local json = HttpService:JSONEncode(cfg)
-        writefile("Smile Hub GUI/" .. name .. ".json", json)
+        writefile(self.scriptFolder .. "/" .. name .. ".json", json)
     end
     function window:LoadConfig(name)
-        if not isfile("Smile Hub GUI/" .. name .. ".json") then return end
-        local json = readfile("Smile Hub GUI/" .. name .. ".json")
+        local filePath = self.scriptFolder .. "/" .. name .. ".json"
+        if not isfile(filePath) then return end
+        local json = readfile(filePath)
         local cfg = HttpService:JSONDecode(json)
         for key, val in pairs(cfg) do
             local el = self.Elements[key]
             if el then
                 if el.type == "toggle" then
                     el.api:SetState(val)
-                elseif el.type == "slider" then
+                elseif el.type == "slider" or el.type == "progress" then
                     el.api:SetValue(val)
                 elseif el.type == "dropdown" then
                     el.api:SetSelection(val)
+                elseif el.type == "textbox" then
+                    el.api:SetText(val)
                 elseif el.type == "keybind" then
                     local enum = Enum[val.EnumType][val.Name]
                     el.api:SetKey(enum)
-                elseif el.type == "textbox" then
-                    el.api:SetText(val)
-                elseif el.type == "progress" then
-                    el.api:SetValue(val)
                 end
             end
         end
@@ -876,6 +904,9 @@ function SmileUILib:CreateWindow(options)
         Size = UDim2.new(0, width, 0, height),
         BackgroundTransparency = 0
     }):Play()
+    if autoConfig then
+        window:LoadConfig("AutomaticConfig")
+    end
     return window
 end
 return SmileUILib
