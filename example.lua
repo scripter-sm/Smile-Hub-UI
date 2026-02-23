@@ -1,10 +1,10 @@
 local SmileUILib = loadstring(game:HttpGet("https://raw.githubusercontent.com/RblxScriptsOG/Smile-Hub-UI/refs/heads/main/lib.lua"))()
 
 local Window = SmileUILib:CreateWindow({
-    title = "Smile Hub - UI Showcase",
+    title = "$mile Hub - UI Showcase",
     width = 700,
     height = 550,
-    iconText = "☺"
+    iconText = "$"
 })
 
 local ElementsTab = Window:AddTab({ name = "Elements" })
