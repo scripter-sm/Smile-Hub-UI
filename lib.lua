@@ -1,11 +1,3 @@
---[[
-  _________ .**.** ___ ___ ***.
- / *****/ _____ |**| | ____ / | \ __ *_ |**
- _**** \ / | | | */ __ \ / ~ \ | \ __ 
-/ \ Y Y \ | |*\ ***/ \ Y / | / _\ 
-/****___ /**|_| /******/___ > ___|* /|****/|*** /
-        / / / /
-]]
 local SmileUILib = {}
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -1147,13 +1139,11 @@ function SmileUILib:CreateWindow(options)
             return api
         end
         
-        -- CLICK ON COLOR BOX TO OPEN COLORPICKER - NO BUTTON
         function tabAPI:AddColorPicker(cpOptions)
             local name = cpOptions.name or "Color Picker"
             local default = cpOptions.default or Color3.fromRGB(0, 255, 0)
             local callback = cpOptions.callback
             
-            -- Main container - compact row
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -8, 0, 40)
             frame.BackgroundColor3 = theme.AccentVeryDark
@@ -1165,7 +1155,6 @@ function SmileUILib:CreateWindow(options)
             c.CornerRadius = theme.ElementCornerRadius
             c.Parent = frame
             
-            -- Label - LEFT SIDE
             local lbl = Instance.new("TextLabel")
             lbl.Size = UDim2.new(1, -70, 1, 0)
             lbl.Position = UDim2.new(0, 14, 0, 0)
@@ -1180,7 +1169,6 @@ function SmileUILib:CreateWindow(options)
             
             RegisterElement(windowId, lbl, "TextColor3", "Text")
             
-            -- CLICKABLE COLOR BOX - RIGHT SIDE (opens colorpicker when clicked)
             local colorBox = Instance.new("TextButton")
             colorBox.Size = UDim2.new(0, 50, 0, 28)
             colorBox.Position = UDim2.new(1, -62, 0.5, -14)
@@ -1193,7 +1181,6 @@ function SmileUILib:CreateWindow(options)
             cbc.CornerRadius = UDim.new(0, 4)
             cbc.Parent = colorBox
             
-            -- Border stroke for color box
             local boxStroke = Instance.new("UIStroke")
             boxStroke.Color = theme.StrokeColor
             boxStroke.Thickness = 2
@@ -1201,7 +1188,6 @@ function SmileUILib:CreateWindow(options)
             
             RegisterElement(windowId, boxStroke, "Color", "StrokeColor")
             
-            -- Hover effect for color box
             colorBox.MouseEnter:Connect(function()
                 TweenService:Create(boxStroke, TweenInfo.new(0.2), {
                     Thickness = 3
@@ -1214,7 +1200,6 @@ function SmileUILib:CreateWindow(options)
                 }):Play()
             end)
             
-            -- Modal Color Picker Window
             local modalOpen = false
             local modalFrame = nil
             
@@ -1261,7 +1246,6 @@ function SmileUILib:CreateWindow(options)
                 os.Thickness = 2
                 os.Parent = overlay
                 
-                -- Header
                 local mHeader = Instance.new("Frame")
                 mHeader.Size = UDim2.new(1, 0, 0, 32)
                 mHeader.BackgroundColor3 = SmileUILib.Theme.Header
@@ -1285,7 +1269,6 @@ function SmileUILib:CreateWindow(options)
                 mTitle.ZIndex = 102
                 mTitle.Parent = mHeader
                 
-                -- Close button
                 local closeBtn = Instance.new("TextButton")
                 closeBtn.Size = UDim2.new(0, 28, 0, 28)
                 closeBtn.Position = UDim2.new(1, -32, 0, 2)
@@ -1299,11 +1282,9 @@ function SmileUILib:CreateWindow(options)
                 
                 closeBtn.MouseButton1Click:Connect(closeModal)
                 
-                -- Color variables
                 local h, s, v = Color3ToHSV(default)
                 local currentColor = default
                 
-                -- Spectrum
                 local spectrumFrame = Instance.new("Frame")
                 spectrumFrame.Size = UDim2.new(0, 200, 0, 140)
                 spectrumFrame.Position = UDim2.new(0, 12, 0, 44)
@@ -1346,7 +1327,6 @@ function SmileUILib:CreateWindow(options)
                 valGradient.Rotation = 90
                 valGradient.Parent = valOverlay
                 
-                -- Cursor
                 local cursor = Instance.new("Frame")
                 cursor.Size = UDim2.new(0, 10, 0, 10)
                 cursor.Position = UDim2.new(s, -5, 1 - v, -5)
@@ -1360,7 +1340,6 @@ function SmileUILib:CreateWindow(options)
                 cc.CornerRadius = UDim.new(1, 0)
                 cc.Parent = cursor
                 
-                -- Hue Slider
                 local hueFrame = Instance.new("Frame")
                 hueFrame.Size = UDim2.new(0, 200, 0, 16)
                 hueFrame.Position = UDim2.new(0, 12, 0, 190)
@@ -1394,7 +1373,6 @@ function SmileUILib:CreateWindow(options)
                 hueCursor.ZIndex = 102
                 hueCursor.Parent = hueFrame
                 
-                -- Preview section
                 local previewSection = Instance.new("Frame")
                 previewSection.Size = UDim2.new(0, 50, 0, 140)
                 previewSection.Position = UDim2.new(0, 220, 0, 44)
@@ -1414,7 +1392,6 @@ function SmileUILib:CreateWindow(options)
                 bpc.CornerRadius = UDim.new(0, 6)
                 bpc.Parent = bigPreview
                 
-                -- RGB Labels
                 local rLabel = Instance.new("TextLabel")
                 rLabel.Size = UDim2.new(1, 0, 0, 18)
                 rLabel.Position = UDim2.new(0, 0, 0, 58)
@@ -1463,7 +1440,6 @@ function SmileUILib:CreateWindow(options)
                 hexLabel.ZIndex = 101
                 hexLabel.Parent = previewSection
                 
-                -- Confirm button
                 local confirmBtn = Instance.new("TextButton")
                 confirmBtn.Size = UDim2.new(0, 120, 0, 32)
                 confirmBtn.Position = UDim2.new(0.5, -60, 0, 270)
@@ -1479,7 +1455,6 @@ function SmileUILib:CreateWindow(options)
                 cbc.CornerRadius = UDim.new(0, 6)
                 cbc.Parent = confirmBtn
                 
-                -- Update function
                 local function updateColor()
                     currentColor = HSVToColor3(h, s, v)
                     bigPreview.BackgroundColor3 = currentColor
@@ -1495,7 +1470,6 @@ function SmileUILib:CreateWindow(options)
                     hexLabel.Text = string.format("#%02X%02X%02X", r, g, b)
                 end
                 
-                -- Dragging logic
                 local spectrumDragging = false
                 spectrumFrame.InputBegan:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -1555,7 +1529,6 @@ function SmileUILib:CreateWindow(options)
                     end
                 end)
                 
-                -- Confirm
                 confirmBtn.MouseButton1Click:Connect(function()
                     if callback then callback(currentColor) end
                     closeModal()
@@ -1578,7 +1551,6 @@ function SmileUILib:CreateWindow(options)
                     }):Play()
                 end)
                 
-                -- Animation
                 overlay.Size = UDim2.new(0, 280, 0, 0)
                 overlay.BackgroundTransparency = 1
                 TweenService:Create(overlay, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
@@ -1587,10 +1559,8 @@ function SmileUILib:CreateWindow(options)
                 }):Play()
             end
             
-            -- CLICK ON COLOR BOX TO OPEN COLORPICKER
             colorBox.MouseButton1Click:Connect(openModal)
             
-            -- API
             local api = {}
             local currentColor = default
             
