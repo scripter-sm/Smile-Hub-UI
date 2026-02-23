@@ -11,7 +11,7 @@ Designed with performance, visuals, and simplicity in mind.
 - Animated windows with drag and minimize functionality
 - Tab-based layout for organized content
 - Modern green terminal aesthetic (neon green accents on black background)
-- **Dynamic theme system - change themes anytime after GUI is loaded**
+- Dynamic theme system - change themes anytime after GUI is loaded
 - Built-in notification system with animations
 - Easy-to-use API for common UI elements: toggles, sliders, dropdowns, buttons, keybinds, textboxes, progress bars, sections, labels, and spacers
 - Customizable themes, sizes, colors, and behaviors via options tables
