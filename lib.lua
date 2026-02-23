@@ -1,3 +1,14 @@
+--[[
+
+  _________       .__.__             ___ ___      ___.     
+ /   _____/ _____ |__|  |   ____    /   |   \ __ _\_ |__   
+ \_____  \ /     \|  |  | _/ __ \  /    ~    \  |  \ __ \  
+ /        \  Y Y  \  |  |_\  ___/  \    Y    /  |  / \_\ \ 
+/_______  /__|_|  /__|____/\___  >  \___|_  /|____/|___  / 
+        \/      \/             \/         \/           \/  
+
+ ]]
+
 local SmileUILib = {}
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -1103,15 +1114,13 @@ function SmileUILib:CreateWindow(options)
             
             local fill = Instance.new("Frame")
             fill.Size = UDim2.new(value / max, 0, 1, 0)
-            fill.BackgroundColor3 = theme.Accent
+            fill.BackgroundColor3 = Color3.fromRGB(128, 128, 128)
             fill.Parent = track
-            
-            RegisterElement(windowId, fill, "BackgroundColor3", "Accent")
             
             local gradient = Instance.new("UIGradient")
             gradient.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, theme.Accent),
-                ColorSequenceKeypoint.new(1, theme.AccentDark)
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(160, 160, 160)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 100, 100))
             })
             gradient.Rotation = 0
             gradient.Parent = fill
