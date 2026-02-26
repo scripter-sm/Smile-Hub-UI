@@ -459,6 +459,7 @@ Just **credit the original creator**.
 
 - **Creator:** Scripter.SM
 - **Discord:** https://discord.gg/VJH9YUcFDr 
+- **Docs:** https://smile-hub.vercel.app/
 - **GitHub:** https://github.com/RblxScriptsOG 
 - **UI Concept & Code:** Smile Hub UI\
 If you use this library, please ⭐ the repository.
