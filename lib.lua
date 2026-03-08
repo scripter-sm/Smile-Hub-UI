@@ -77,10 +77,32 @@ local function RegisterButton(windowId, button)
 	table.insert(SmileUILib.ButtonRegistry[windowId], button)
 end
 
+local function lerpColor(a, b, t)
+	return Color3.new(a.R+(b.R-a.R)*t, a.G+(b.G-a.G)*t, a.B+(b.B-a.B)*t)
+end
+
+SmileUILib._gradients = {}
+
+local function applyDerivedTheme(newTheme)
+	local T  = SmileUILib.Theme
+	for k, v in pairs(newTheme) do T[k] = v end
+	local A  = T.Accent
+	local BG = T.Background
+	local W  = Color3.new(1,1,1)
+	if not newTheme.AccentHover    then T.AccentHover    = lerpColor(A, W,  0.18) end
+	if not newTheme.AccentDark     then T.AccentDark     = lerpColor(A, BG, 0.25) end
+	if not newTheme.AccentDarker   then T.AccentDarker   = lerpColor(A, BG, 0.55) end
+	if not newTheme.AccentVeryDark then T.AccentVeryDark = lerpColor(A, BG, 0.82) end
+	if not newTheme.BorderAccent   then T.BorderAccent   = lerpColor(A, BG, 0.38) end
+	if not newTheme.Surface        then T.Surface        = lerpColor(BG, W, 0.04) end
+	if not newTheme.SurfaceLight   then T.SurfaceLight   = lerpColor(BG, W, 0.09) end
+	if not newTheme.SurfaceLighter then T.SurfaceLighter = lerpColor(BG, W, 0.14) end
+	if not newTheme.Header         then T.Header         = lerpColor(BG, W, 0.06) end
+	if not newTheme.StrokeColor    then T.StrokeColor    = lerpColor(BG, W, 0.18) end
+end
+
 function SmileUILib:SetTheme(newTheme)
-	for key, value in pairs(newTheme) do
-		self.Theme[key] = value
-	end
+	applyDerivedTheme(newTheme)
 	for windowId, elements in pairs(self.ThemeableElements) do
 		for _, data in ipairs(elements) do
 			if data.Element and data.Element.Parent then
@@ -88,6 +110,16 @@ function SmileUILib:SetTheme(newTheme)
 				if color then
 					pcall(function() data.Element[data.Property] = color end)
 				end
+			end
+		end
+	end
+	for _, g in ipairs(self._gradients) do
+		if g.instance and g.instance.Parent then
+			if g.gtype == "progressFill" then
+				g.instance.Color = ColorSequence.new({
+					ColorSequenceKeypoint.new(0, self.Theme.AccentHover),
+					ColorSequenceKeypoint.new(1, self.Theme.Accent)
+				})
 			end
 		end
 	end
@@ -569,7 +601,6 @@ function SmileUILib:CreateWindow(options)
 						BackgroundColor3 = isActive and SmileUILib.Theme.AccentDarker or SmileUILib.Theme.Background,
 						TextColor3       = isActive and SmileUILib.Theme.Accent       or SmileUILib.Theme.TextDim,
 					})
-					RegisterElement(windowId, b, "TextColor3", isActive and "Accent" or "TextDim")
 				end
 			end
 		end)
@@ -579,8 +610,6 @@ function SmileUILib:CreateWindow(options)
 			tabBtn.TextColor3       = T.Accent
 			page.Visible            = true
 			activePage              = page
-			RegisterElement(windowId, tabBtn, "BackgroundColor3", "AccentDarker")
-			RegisterElement(windowId, tabBtn, "TextColor3",       "Accent")
 		end
 
 		local tabAPI = {}
@@ -751,7 +780,6 @@ function SmileUILib:CreateWindow(options)
 				state = bool
 				tw(pill, {BackgroundColor3 = SmileUILib.Theme[state and "Accent" or "AccentVeryDark"]})
 				tw(knob, {Position = UDim2.new(0, state and (pillW - pillH + 3) or 3, 0.5, 0)})
-				RegisterElement(windowId, pill, "BackgroundColor3", state and "Accent" or "AccentVeryDark")
 				if opts.callback then opts.callback(state) end
 			end
 			frame.InputBegan:Connect(function(i)
@@ -982,9 +1010,10 @@ function SmileUILib:CreateWindow(options)
 			mkCorner(tb)
 			local tbs = mkStroke(tb, "BorderAccent")
 			mkPad(tb, 0, 0, 5, 5)
-			RegisterElement(windowId, tb,  "BackgroundColor3", "AccentVeryDark")
-			RegisterElement(windowId, tb,  "TextColor3",       "Text")
-			RegisterElement(windowId, tbs, "Color",            "BorderAccent")
+			RegisterElement(windowId, tb,  "BackgroundColor3",  "AccentVeryDark")
+			RegisterElement(windowId, tb,  "TextColor3",        "Text")
+			RegisterElement(windowId, tb,  "PlaceholderColor3", "TextDim")
+			RegisterElement(windowId, tbs, "Color",             "BorderAccent")
 
 			local text = opts.default or ""
 			local api  = {}
@@ -1062,6 +1091,7 @@ function SmileUILib:CreateWindow(options)
 				ColorSequenceKeypoint.new(1, SmileUILib.Theme.Accent)
 			})
 			gradient.Parent = fill
+			table.insert(SmileUILib._gradients, {instance = gradient, gtype = "progressFill"})
 
 			local curValue = value
 			local api      = {}
